@@ -12,7 +12,7 @@ fun main() {
     println("Punti letti dal file:\n $waypoints");
 
     val maxDistance = maxDistanceFromStart(waypoints);
-    println("Max distance from start: $maxDistance");
+    println("Max distance from start : $maxDistance");
 }
 
 
