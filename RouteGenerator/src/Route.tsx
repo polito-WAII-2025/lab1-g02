@@ -199,7 +199,6 @@ export default function MyMap() {
         const start = [...markers[i-1]].reverse() as Coordinate;
         const end = [...markers[i]].reverse() as Coordinate;
         const {coordinates,speed, error} = await getRoute(apiKey,start, end);
-        console.log(`Speed: ${speed} m/s`);
 
         if (error) {
           setError(error);
