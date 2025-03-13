@@ -1,5 +1,6 @@
 package org.example
 
+import com.charleskorn.kaml.Yaml
 import java.io.File
 import java.time.Instant
 import kotlin.math.atan2
@@ -20,11 +21,9 @@ object Utilities {
         return R * c // Distance in km
     }
 
-
     fun deg2rad(deg: Double): Double {
         return deg * (Math.PI / 180)
     }
-
 
     fun readCsv(filePath: String): List<WayPoint> {
         val lines = File(filePath).readLines()
@@ -39,5 +38,9 @@ object Utilities {
             }
     }
 
+    fun readYml(filePath: String): CustomParameters {
+        val file = File(filePath);
+        return Yaml.default.decodeFromString(CustomParameters.serializer(), file.readText());
+    }
 
 }

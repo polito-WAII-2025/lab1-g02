@@ -1,5 +1,6 @@
 plugins {
     kotlin("jvm") version "2.1.10"
+    kotlin("plugin.serialization") version "1.4.20"
     application
 }
 
@@ -12,6 +13,8 @@ repositories {
 
 dependencies {
     testImplementation(kotlin("test"))
+    implementation("com.uber:h3:4.1.1")
+    implementation("com.charleskorn.kaml:kaml:0.72.0")
 }
 
 tasks.test {

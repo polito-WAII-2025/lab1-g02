@@ -1,15 +1,32 @@
 package org.example
+
+import com.uber.h3core.H3Core
 import java.time.Instant
+import java.time.Duration
 
 fun main() {
     //val currentDir = System.getProperty("user.dir")
     //println("Current directory: $currentDir")
-    val waypoints = Utilities.readCsv("./src/main/resources/csv/waypoints_v2.csv") //./gradlew run inside RouteAnalyzer folder
+
+    val customParameters = Utilities.readYml("./src/main/resources/yml/custom-parameters.yml")
+    val waypoints = Utilities.readCsv("./src/main/resources/csv/waypoints.csv")
+
     //println("Punti letti dal file:\n $waypoints")
+    //println("$customParameters");
+
     val maxDistance = maxDistanceFromStart(waypoints)
     println("Max distance from start: $maxDistance")
-    //print( "numero di punti: ${WaypointsOutsideGeofence(WayPoint(Instant.now(),7.6935875084573695,45.091909939688094),4.5,waypoints).size}")
-    print( "numero di punti: ${waypointsOutsideGeofence(WayPoint(Instant.now(),45.05330, 7.66740),5.76,waypoints).size}")
+
+    //val newInputParameters = if (maxDistance < 1) 0.1 else (maxDistance / 10).
+    //customParameters.mostFrequentedAreaRadiusKm ?: customParameters.setMostFrequentedAreaRadiusKm(newInputParameters)
+    //print("nuovi $customParameters")
+
+    println( "numero di punti: " +
+            "${waypointsOutsideGeofence(WayPoint(Instant.now(), 45.05330, 7.66740),5.76, waypoints).size}"
+    )
+
+    println(getAreasGivenWaypoints(waypoints))
+
 }
 
 //Calculate the farthest distance from the starting point of the route.
@@ -33,14 +50,46 @@ fun maxDistanceFromStart(waypoints: List<WayPoint>): Double {
     return max
 }
 
-fun waypointsOutsideGeofence(centre:WayPoint,radius:Double,listOfWayPoints:List<WayPoint> ):List<WayPoint>{
+fun waypointsOutsideGeofence(centre: WayPoint, radius: Double, listOfWayPoints: List<WayPoint>): List<WayPoint> {
     val outsideWayPoints = mutableListOf<WayPoint>()
-    for(waypoint in listOfWayPoints){
+    for (waypoint in listOfWayPoints) {
         //print("Distanza: ${Utilities.distanceFromWayPoints(centre,waypoint)}")
-        if(Utilities.distanceFromWayPoints(centre,waypoint)>radius) {
+        if (Utilities.distanceFromWayPoints(centre, waypoint) > radius) {
             outsideWayPoints.add(waypoint)
             //println(waypoint.toString())
         }
     }
     return outsideWayPoints
 }
+
+// Todo: Count waypoint in the hexagon
+fun getAreasGivenWaypoints(list: List<WayPoint>): WayPoint? {
+    if (list.size < 2) return null
+
+    val mapOfTimeForArea = mutableMapOf<Long, Duration>()
+    val h3 = H3Core.newInstance()
+    var pointer1 = 0
+    var currentCell = h3.latLngToCell(list[pointer1].lat, list[pointer1].lon, 9)
+
+    for (pointer2 in 1 until list.size) {
+        val nextCell = h3.latLngToCell(list[pointer2].lat, list[pointer2].lon, 9)
+        if (currentCell != nextCell) {
+            // println("primoPointer: \$pointer1 secondo point: \$pointer2 valori: \${list[pointer1].timestamp} , \${list[pointer2].timestamp}")
+            val duration = Duration.between(list[pointer1].timestamp, list[pointer2].timestamp)
+            mapOfTimeForArea[currentCell] = mapOfTimeForArea.getOrDefault(currentCell, Duration.ZERO).plus(duration)
+            pointer1 = pointer2
+            currentCell = nextCell
+        }
+    }
+
+    val mostFrequentedEntry = mapOfTimeForArea.maxByOrNull { it.value } ?: return null
+    println(mostFrequentedEntry.key)
+    val center = h3.cellToLatLng(mostFrequentedEntry.key)
+    println(center)
+
+    println(mapOfTimeForArea)
+    return null
+}
+
+
+
