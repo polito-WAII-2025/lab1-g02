@@ -38,9 +38,13 @@ object Utilities {
             }
     }
 
-    fun readYml(filePath: String): CustomParameters {
+   fun readYml(filePath: String): CustomParameters {
         val file = File(filePath);
         return Yaml.default.decodeFromString(CustomParameters.serializer(), file.readText());
+    }
+    fun computeMostFrequentedAreaRadiusKm(maxDistance: Double, fraction: Int): Double {
+        val result = if (maxDistance < 1) 0.1 else (maxDistance / fraction)
+        return String.format("%.2f", result).replace(",", ".").toDouble()
     }
 
 }

@@ -1,6 +1,7 @@
 package org.example
 
 import com.uber.h3core.H3Core
+import org.example.Utilities.computeMostFrequentedAreaRadiusKm
 import java.time.Instant
 import java.time.Duration
 
@@ -17,9 +18,9 @@ fun main() {
     val maxDistance = maxDistanceFromStart(waypoints)
     println("Max distance from start: $maxDistance")
 
-    //val newInputParameters = if (maxDistance < 1) 0.1 else (maxDistance / 10).
-    //customParameters.mostFrequentedAreaRadiusKm ?: customParameters.setMostFrequentedAreaRadiusKm(newInputParameters)
-    //print("nuovi $customParameters")
+    val newInputParameters = computeMostFrequentedAreaRadiusKm(maxDistance,10)
+    customParameters.mostFrequentedAreaRadiusKm ?: customParameters.setMostFrequentedAreaRadiusKm(newInputParameters)
+    print("nuovi $customParameters")
 
     println( "numero di punti: " +
             "${waypointsOutsideGeofence(WayPoint(Instant.now(), 45.05330, 7.66740),5.76, waypoints).size}"
