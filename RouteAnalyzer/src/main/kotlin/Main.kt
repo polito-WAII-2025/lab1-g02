@@ -26,7 +26,7 @@ fun main() {
             "${waypointsOutsideGeofence(WayPoint(Instant.now(), 45.05330, 7.66740),5.76, waypoints).size}"
     )
 
-    println(getAreasGivenWaypoints(waypoints))
+    Utilities.getAreasGivenWaypoints(waypoints)
 
 }
 
@@ -63,34 +63,9 @@ fun waypointsOutsideGeofence(centre: WayPoint, radius: Double, listOfWayPoints: 
     return outsideWayPoints
 }
 
-// Todo: Count waypoint in the hexagon
-fun getAreasGivenWaypoints(list: List<WayPoint>): WayPoint? {
-    if (list.size < 2) return null
 
-    val mapOfTimeForArea = mutableMapOf<Long, Duration>()
-    val h3 = H3Core.newInstance()
-    var pointer1 = 0
-    var currentCell = h3.latLngToCell(list[pointer1].lat, list[pointer1].lon, 9)
 
-    for (pointer2 in 1 until list.size) {
-        val nextCell = h3.latLngToCell(list[pointer2].lat, list[pointer2].lon, 9)
-        if (currentCell != nextCell) {
-            // println("primoPointer: \$pointer1 secondo point: \$pointer2 valori: \${list[pointer1].timestamp} , \${list[pointer2].timestamp}")
-            val duration = Duration.between(list[pointer1].timestamp, list[pointer2].timestamp)
-            mapOfTimeForArea[currentCell] = mapOfTimeForArea.getOrDefault(currentCell, Duration.ZERO).plus(duration)
-            pointer1 = pointer2
-            currentCell = nextCell
-        }
-    }
 
-    val mostFrequentedEntry = mapOfTimeForArea.maxByOrNull { it.value } ?: return null
-    println(mostFrequentedEntry.key)
-    val center = h3.cellToLatLng(mostFrequentedEntry.key)
-    println(center)
-
-    println(mapOfTimeForArea)
-    return null
-}
 
 
 
