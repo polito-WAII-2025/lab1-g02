@@ -2,3 +2,4 @@ earthRadiusKm: 6371.0
 geofenceCenterLatitude: 45.4642
 geofenceCenterLongitude: 9.1900
 geofenceRadiusKm: 2.5
+mostFrequentedAreaRadiusKm: 100

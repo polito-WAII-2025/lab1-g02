@@ -5,6 +5,7 @@ import org.example.Utilities.computeMostFrequentedAreaRadiusKm
 import java.time.Instant
 import java.time.Duration
 
+
 fun main() {
     //val currentDir = System.getProperty("user.dir")
     //println("Current directory: $currentDir")
@@ -20,13 +21,14 @@ fun main() {
 
     val newInputParameters = computeMostFrequentedAreaRadiusKm(maxDistance,10)
     customParameters.mostFrequentedAreaRadiusKm ?: customParameters.setMostFrequentedAreaRadiusKm(newInputParameters)
-    print("nuovi $customParameters")
+    println("nuovi $customParameters")
 
     println( "numero di punti: " +
             "${waypointsOutsideGeofence(WayPoint(Instant.now(), 45.05330, 7.66740),5.76, waypoints).size}"
     )
 
-    Utilities.getAreasGivenWaypoints(waypoints)
+    Utilities.getAreasGivenWaypoints(waypoints, customParameters.mostFrequentedAreaRadiusKm!!)
+
 
 }
 
@@ -62,10 +64,5 @@ fun waypointsOutsideGeofence(centre: WayPoint, radius: Double, listOfWayPoints: 
     }
     return outsideWayPoints
 }
-
-
-
-
-
 
 

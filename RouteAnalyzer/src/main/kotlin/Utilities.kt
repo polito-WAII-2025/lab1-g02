@@ -10,6 +10,14 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
 
+val averageEdgeLengthKm = mapOf(
+    0 to 1281.256, 1 to 483.057, 2 to 182.513,
+    3 to 68.979, 4 to 26.072, 5 to 9.854,
+    6 to 3.725, 7 to 1.406, 8 to 0.531,
+    9 to 0.201, 10 to 0.0759, 11 to 0.0287,
+    12 to 0.0108, 13 to 0.0041, 14 to 0.0015, 15 to 0.0006
+)
+
 object Utilities {
 
     val H3Istance =  H3Core.newInstance()
@@ -57,8 +65,18 @@ object Utilities {
 
     // Todo: Count waypoint in the hexagon
     //TODO is better to split the functions, one for the maximum and the other for finding the map (idArea,Duration)
-    fun getAreasGivenWaypoints(list: List<WayPoint>): WayPoint? {
-        if (list.size < 2) return null
+    fun getAreasGivenWaypoints(list: List<WayPoint>, mostFrequentedAreaRadiusKm: Double): WayPoint? {
+        // if list  is empty - return null
+        if (list.isEmpty()) return null
+
+        //one element in the list
+        if(list.size == 1) return list.get(0);
+
+        //calculate the best resolution given the radius
+        val res = averageEdgeLengthKm.minByOrNull { (_, edgeLength) ->
+            kotlin.math.abs(edgeLength - mostFrequentedAreaRadiusKm)
+        }?.key
+        println("Best resolution: $res")
 
         val mapOfTimeForArea = mutableMapOf<Long, Duration>()
 
@@ -77,11 +95,16 @@ object Utilities {
         }
         val duration = Duration.between(list[pointer1].timestamp, list[list.size-1].timestamp)
         mapOfTimeForArea[currentCell] = mapOfTimeForArea.getOrDefault(currentCell, Duration.ZERO).plus(duration)
-        println(mapOfTimeForArea)
-        println(mapOfTimeForArea)
-        return null
-    }
-    fun findMaxTimeStamp(){
 
+        val mostFrequentedEntry = mapOfTimeForArea.maxByOrNull { it.value } ?: return null
+        println("ID cell most frequented: ${mostFrequentedEntry.key}")
+        val center = H3Istance.cellToLatLng(mostFrequentedEntry.key)
+        println("Center of most frequented area: $center")
+
+        return WayPoint(Instant.now(), center.lat, center.lng)
     }
+
+//    fun findMaxTimeStamp(){
+//
+//    }
 }
