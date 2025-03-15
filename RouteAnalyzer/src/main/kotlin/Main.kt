@@ -37,7 +37,7 @@ fun main() {
     // func 2
     val (centralWayPoint, entriesCount) = mostFrequentedArea(waypoints, customParameters.mostFrequentedAreaRadiusKm!!) ?: Pair(WayPoint(Instant.now(), 0.0, 0.0), 0L)
 
-    //TODO: write results in the output.json file
+    //write results in the output.json file
     val output = OutputJson(
         maxDistanceFromStart = MaxDistanceFromStart (
             mostDistantWaypoint,
