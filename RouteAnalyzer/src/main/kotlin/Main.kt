@@ -11,25 +11,22 @@ fun main() {
     //println("Current directory: $currentDir")
 
     val customParameters = Utilities.readYml("./src/main/resources/yml/custom-parameters.yml")
-    val waypoints = Utilities.readCsv("./src/main/resources/csv/waypoints.csv")
+    val waypoints = Utilities.readCsv("./src/main/resources/csv/waypoints_v2.csv")
 
     //println("Punti letti dal file:\n $waypoints")
     //println("$customParameters");
 
     val maxDistance = maxDistanceFromStart(waypoints)
-    println("Max distance from start: $maxDistance")
+    //println("Max distance from start: $maxDistance")
 
     val newInputParameters = computeMostFrequentedAreaRadiusKm(maxDistance,10)
     customParameters.mostFrequentedAreaRadiusKm ?: customParameters.setMostFrequentedAreaRadiusKm(newInputParameters)
     println("nuovi $customParameters")
 
-    println( "numero di punti: " +
-            "${waypointsOutsideGeofence(WayPoint(Instant.now(), 45.05330, 7.66740),5.76, waypoints).size}"
-    )
+    //println( "numero di punti: " + "${waypointsOutsideGeofence(WayPoint(Instant.now(), 45.05330, 7.66740),5.76, waypoints).size}")
+    val (centralWayPoint, entriesCount) = mostFrequentedArea(waypoints, customParameters.mostFrequentedAreaRadiusKm!!) ?: Pair(WayPoint(Instant.now(), 0.0, 0.0), 0L)
 
-    Utilities.getAreasGivenWaypoints(waypoints, customParameters.mostFrequentedAreaRadiusKm!!)
-
-
+    //TODO: write results in the output.json file
 }
 
 //Calculate the farthest distance from the starting point of the route.
@@ -51,6 +48,73 @@ fun maxDistanceFromStart(waypoints: List<WayPoint>): Double {
         }
     }
     return max
+}
+
+//TODO is better to split the functions, one for the maximum and the other for finding the map (idArea,Duration)
+fun mostFrequentedArea(list: List<WayPoint>, mostFrequentedAreaRadiusKm: Double): Pair<WayPoint, Long>? {
+    // if list  is empty - return null
+    if (list.isEmpty()) return null
+
+    //one element in the list
+    if(list.size == 1) return Pair(list.get(0), 1);
+
+    //calculate the best resolution given the radius
+    var res: Int? = averageEdgeLengthKm.minByOrNull { (_, edgeLength) ->
+        kotlin.math.abs(edgeLength - mostFrequentedAreaRadiusKm)
+    }?.key
+    res = res!!
+    //println("Best resolution: $res")
+
+
+    val mapOfAreas = mutableMapOf<Long, AreaInfo>() //AreaInfo useful to store information for each area
+    //val mapOfAreas = mutableMapOf<Long, Duration>() //AreaInfo useful to store information for each area
+    var pointer1 = 0
+    var currentCell = Utilities.calculateCell(list[pointer1].lat, list[pointer1].lon, res)
+    var temp = AreaInfo(Duration.ZERO, 1, list[pointer1].timestamp) // have 1 entry in current cell
+    mapOfAreas[currentCell] = temp
+    //println("here: ${mapOfAreas[currentCell]}")
+
+    for (pointer2 in 1 until list.size) {
+        val nextCell = Utilities.calculateCell(list[pointer2].lat, list[pointer2].lon, res)
+        if (currentCell != nextCell) {  // found point in cell != current cell
+
+            if (nextCell in mapOfAreas) {   // entry in map for next cell, increm cntr for # pts
+                val areaInfo = mapOfAreas[currentCell]!!
+                areaInfo.incrementEntriesCount()
+            }
+            else {  // no entry in map for next cell, create object AreaInfo for next cell
+                temp = AreaInfo(Duration.ZERO, 1, list[pointer2].timestamp)
+                mapOfAreas[nextCell] = temp
+            }
+
+            // for current cell, update timeSpentInArea with new duration
+            val duration = Duration.between(list[pointer1].timestamp, list[pointer2].timestamp)
+            mapOfAreas[currentCell]!!.timeSpentInArea = mapOfAreas.getOrDefault(currentCell, AreaInfo(Duration.ZERO, 1, list[pointer1].timestamp)).timeSpentInArea.plus(duration)
+            pointer1 = pointer2
+            currentCell = nextCell
+        }
+        else {   // point in same cell, increm cntr for # pts
+            val areaInfo = mapOfAreas[currentCell]!!
+            areaInfo.incrementEntriesCount()
+        }
+    }
+
+    val duration = Duration.between(list[pointer1].timestamp, list[list.size - 1].timestamp)
+    mapOfAreas[currentCell]!!.timeSpentInArea = mapOfAreas.getOrDefault(currentCell, AreaInfo(Duration.ZERO, 1, list[pointer1].timestamp)).timeSpentInArea.plus(duration)   // add to duration the time spent in the same last hexago
+
+    // find max
+    val mostFrequentedEntry = mapOfAreas.maxByOrNull { it.value.timeSpentInArea } ?: return null
+    println("ID of cell (most frequented): ${mostFrequentedEntry.key}")
+
+    val center = Utilities.H3Instance.cellToLatLng(mostFrequentedEntry.key)
+    println("Time spent in the area: ${mostFrequentedEntry.value.timeSpentInArea}")
+    println("Center of most frequented area: $center")
+    println("Number of entries: ${mostFrequentedEntry.value.entriesCount}")
+    println("Timestamp of the first waypoint: ${mostFrequentedEntry.value.timestampFirstPoint}")
+
+
+    val centralWaypoint =  WayPoint(mostFrequentedEntry.value.timestampFirstPoint, center.lat, center.lng)
+    return Pair(centralWaypoint, mostFrequentedEntry.value.entriesCount)
 }
 
 fun waypointsOutsideGeofence(centre: WayPoint, radius: Double, listOfWayPoints: List<WayPoint>): List<WayPoint> {
