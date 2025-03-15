@@ -24,11 +24,11 @@ object Utilities {
 
     fun distanceFromWayPoints(point1: WayPoint, point2: WayPoint): Double {
         val R = 6371.0
-        val dLat = deg2rad(point2.lat - point1.lat)  // deg2rad below
-        val dLon = deg2rad(point2.lon - point1.lon)
+        val dLat = deg2rad(point2.latitude - point1.latitude)  // deg2rad below
+        val dLon = deg2rad(point2.longitude - point1.longitude)
 
         val a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                cos(deg2rad(point1.lat)) * cos(deg2rad(point2.lat)) *
+                cos(deg2rad(point1.latitude)) * cos(deg2rad(point2.latitude)) *
                 sin(dLon / 2) * sin(dLon / 2)
         val c: Double = 2 * atan2(Math.sqrt(a), sqrt(1 - a));
         return R * c // Distance in km
@@ -45,8 +45,8 @@ object Utilities {
                 val parts = line.split(";")
                 WayPoint(
                     timestamp = Instant.ofEpochMilli(parts[0].toDouble().toLong()),
-                    lat = parts[1].toDouble(),
-                    lon = parts[2].toDouble()
+                    latitude = parts[1].toDouble(),
+                    longitude = parts[2].toDouble()
                 )
             }
     }
@@ -61,7 +61,7 @@ object Utilities {
         return String.format("%.2f", result).replace(",", ".").toDouble()
     }
 
-    fun calculateCell(lat:Double,lon:Double,resolution:Int): Long = H3Instance.latLngToCell(lat, lon, resolution)
+    fun calculateCell(lat:Double,longitude:Double,resolution:Int): Long = H3Instance.latLngToCell(lat, longitude, resolution)
 
     // Todo: Count waypoint in the hexagon
     //TODO is better to split the functions, one for the maximum and the other for finding the map (idArea,Duration)
@@ -83,13 +83,13 @@ object Utilities {
         val mapOfAreas = mutableMapOf<Long, AreaInfo>() //AreaInfo useful to store information for each area
         //val mapOfAreas = mutableMapOf<Long, Duration>() //AreaInfo useful to store information for each area
         var pointer1 = 0
-        var currentCell = calculateCell(list[pointer1].lat, list[pointer1].lon, res)
+        var currentCell = calculateCell(list[pointer1].latitude, list[pointer1].longitude, res)
         var temp = AreaInfo(Duration.ZERO, 1, list[pointer1].timestamp) // have 1 entry in current cell
         mapOfAreas[currentCell] = temp
         //println("here: ${mapOfAreas[currentCell]}")
 
         for (pointer2 in 1 until list.size) {
-            val nextCell = calculateCell(list[pointer2].lat, list[pointer2].lon, res)
+            val nextCell = calculateCell(list[pointer2].latitude, list[pointer2].longitude, res)
             if (currentCell != nextCell) {  // found point in cell != current cell
 
                 if (nextCell in mapOfAreas) {   // entry in map for next cell, increm cntr for # pts
@@ -121,17 +121,16 @@ object Utilities {
         println("ID of cell (most frequented): ${mostFrequentedEntry.key}")
 
         val center = H3Instance.cellToLatLng(mostFrequentedEntry.key)
+        /*
         println("Time spent in the area: ${mostFrequentedEntry.value.timeSpentInArea}")
         println("Center of most frequented area: $center")
         println("Number of entries: ${mostFrequentedEntry.value.entriesCount}")
         println("Timestamp of the first waypoint: ${mostFrequentedEntry.value.timestampFirstPoint}")
+        */
 
 
         val centralWaypoint =  WayPoint(mostFrequentedEntry.value.timestampFirstPoint, center.lat, center.lng)
         return Pair(centralWaypoint, mostFrequentedEntry.value.entriesCount)
     }
 
-//    fun findMaxTimeStamp(){
-//
-//    }
 }

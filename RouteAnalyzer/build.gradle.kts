@@ -15,6 +15,7 @@ dependencies {
     testImplementation(kotlin("test"))
     implementation("com.uber:h3:4.1.1")
     implementation("com.charleskorn.kaml:kaml:0.72.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0")
 }
 
 tasks.test {
