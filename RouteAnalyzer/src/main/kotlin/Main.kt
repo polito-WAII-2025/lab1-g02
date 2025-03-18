@@ -1,20 +1,26 @@
 package org.example
 
-import com.uber.h3core.H3Core
 import org.example.Utilities.computeMostFrequentedAreaRadiusKm
 import java.time.Instant
 import java.time.Duration
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
 
 
-fun main() {
+fun main(args: Array<String>) {
     val currentDir = System.getProperty("user.dir")
     println("Current directory: $currentDir")
 
-    val customParameters = Utilities.readYml("./src/main/resources/yml/custom-parameters.yml")
-    val waypoints = Utilities.readCsv("./src/main/resources/csv/waypoints_v2.csv")
+    if (args.isEmpty()) {
+        println("Errore: specificare il percorso del file custom-parameters.yml")
+        return
+    }
+
+    println("YML: ${args[0]} " )
+    //val customParameters = Utilities.readYml("./src/main/resources/yml/custom-parameters.yml")
+    val customParameters = Utilities.readYml(args[0])
+    //val waypoints = Utilities.readCsv("./src/main/resources/csv/waypoints_v2.csv")
+    val waypoints = Utilities.readCsv(args[1])
 
     //println("Punti letti dal file:\n $waypoints")
     //println("$customParameters");
@@ -55,10 +61,11 @@ fun main() {
             listWaypointsOutsideGeofence
 
         )
-    );
+    )
 
     val json = Json { prettyPrint = true }
-    File("./src/main/resources/json/output.json").writeText(json.encodeToString(output))
+    //File("./src/main/resources/json/output.json").writeText(json.encodeToString(output))
+    File("./resources/json/output.json").writeText(json.encodeToString(output))
 
 }
 
@@ -91,7 +98,7 @@ fun mostFrequentedArea(list: List<WayPoint>, mostFrequentedAreaRadiusKm: Double)
     if (list.isEmpty()) return null
 
     //one element in the list
-    if(list.size == 1) return Pair(list.get(0), 1);
+    if(list.size == 1) return Pair(list.get(0), 1)
 
     //calculate the best resolution given the radius
     var res: Int? = averageEdgeLengthKm.minByOrNull { (_, edgeLength) ->
