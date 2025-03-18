@@ -7,35 +7,43 @@ import java.time.Duration
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
+import kotlin.math.abs
 
 
 fun main() {
+
     val currentDir = System.getProperty("user.dir")
     println("Current directory: $currentDir")
 
-    val customParameters = Utilities.readYml("./src/main/resources/yml/custom-parameters.yml")
-    val waypoints = Utilities.readCsv("./src/main/resources/csv/waypoints_v2.csv")
+    //read the CSV file
+    val waypointsList = Utilities.readCsv("./src/main/resources/csv/waypoints_v2.csv")
 
-    //println("Punti letti dal file:\n $waypoints")
-    //println("$customParameters");
+    //read the YML file
+    val customParameters = Utilities.readYml("./src/main/resources/yml/custom-parameters.yml")
+
 
     // func 1
-    val (maxDistance, mostDistantWaypoint) = maxDistanceFromStart(waypoints)
-    println("Max distance from start: $maxDistance")
+    val (maxDistance, mostDistantWaypoint) = maxDistanceFromStart(waypointsList)
+    println("Max distance from start: $maxDistance and the waypoint is: $mostDistantWaypoint")
 
-    // read params from yml file
-    val newInputParameters = computeMostFrequentedAreaRadiusKm(maxDistance,10)
-    customParameters.mostFrequentedAreaRadiusKm ?: customParameters.setMostFrequentedAreaRadiusKm(newInputParameters)
+    //TODO ask what to do with exceptions inside the main
+    customParameters.mostFrequentedAreaRadiusKm ?: run {
+        val mostFrequentedAreaRadiusKm = computeMostFrequentedAreaRadiusKm(maxDistance, 10)
+        customParameters.setMostFrequentedAreaRadiusKm(mostFrequentedAreaRadiusKm)
+    }
+
     println("nuovi $customParameters")
+
+    // func 2
+    val (centralWayPoint, entriesCount) = mostFrequentedArea(waypointsList, customParameters.mostFrequentedAreaRadiusKm!!) ?: Pair(WayPoint(Instant.now(), 0.0, 0.0), 0L)
 
     // func 3
     val wayPointGeofence = WayPoint(Instant.ofEpochMilli(0), customParameters.geofenceCenterLatitude, customParameters.geofenceCenterLongitude)
-    val listWaypointsOutsideGeofence = waypointsOutsideGeofence(wayPointGeofence, customParameters.geofenceRadiusKm, waypoints)
+    val listWaypointsOutsideGeofence = waypointsOutsideGeofence(wayPointGeofence, customParameters.geofenceRadiusKm, waypointsList)
+
     // TODO: earth radius
     println( "numero di punti: " + "${listWaypointsOutsideGeofence.size}")
 
-    // func 2
-    val (centralWayPoint, entriesCount) = mostFrequentedArea(waypoints, customParameters.mostFrequentedAreaRadiusKm!!) ?: Pair(WayPoint(Instant.now(), 0.0, 0.0), 0L)
 
     //write results in the output.json file
     val output = OutputJson(
@@ -59,7 +67,6 @@ fun main() {
 
     val json = Json { prettyPrint = true }
     File("./src/main/resources/json/output.json").writeText(json.encodeToString(output))
-
 }
 
 //Calculate the farthest distance from the starting point of the route.
@@ -87,55 +94,16 @@ fun maxDistanceFromStart(waypoints: List<WayPoint>): Pair<Double, WayPoint> {
 
 //TODO is better to split the functions, one for the maximum and the other for finding the map (idArea,Duration)
 fun mostFrequentedArea(list: List<WayPoint>, mostFrequentedAreaRadiusKm: Double): Pair<WayPoint, Long>? {
-    // if list  is empty - return null
-    if (list.isEmpty()) return null
 
+    // list empty
+    if (list.isEmpty()) return null
     //one element in the list
-    if(list.size == 1) return Pair(list.get(0), 1);
+    if(list.size == 1) return Pair(list[0], 1)
 
     //calculate the best resolution given the radius
-    var res: Int? = averageEdgeLengthKm.minByOrNull { (_, edgeLength) ->
-        kotlin.math.abs(edgeLength - mostFrequentedAreaRadiusKm)
-    }?.key
-    res = res!!
-    //println("Best resolution: $res")
+    val res: Int = Utilities.computeResolution(mostFrequentedAreaRadiusKm)
 
-
-    val mapOfAreas = mutableMapOf<Long, AreaInfo>() //AreaInfo useful to store information for each area
-    //val mapOfAreas = mutableMapOf<Long, Duration>() //AreaInfo useful to store information for each area
-    var pointer1 = 0
-    var currentCell = Utilities.calculateCell(list[pointer1].latitude, list[pointer1].longitude, res)
-    var temp = AreaInfo(Duration.ZERO, 1, list[pointer1].timestamp) // have 1 entry in current cell
-    mapOfAreas[currentCell] = temp
-    //println("here: ${mapOfAreas[currentCell]}")
-
-    for (pointer2 in 1 until list.size) {
-        val nextCell = Utilities.calculateCell(list[pointer2].latitude, list[pointer2].longitude, res)
-        if (currentCell != nextCell) {  // found point in cell != current cell
-
-            if (nextCell in mapOfAreas) {   // entry in map for next cell, increm cntr for # pts
-                val areaInfo = mapOfAreas[currentCell]!!
-                areaInfo.incrementEntriesCount()
-            }
-            else {  // no entry in map for next cell, create object AreaInfo for next cell
-                temp = AreaInfo(Duration.ZERO, 1, list[pointer2].timestamp)
-                mapOfAreas[nextCell] = temp
-            }
-
-            // for current cell, update timeSpentInArea with new duration
-            val duration = Duration.between(list[pointer1].timestamp, list[pointer2].timestamp)
-            mapOfAreas[currentCell]!!.timeSpentInArea = mapOfAreas.getOrDefault(currentCell, AreaInfo(Duration.ZERO, 1, list[pointer1].timestamp)).timeSpentInArea.plus(duration)
-            pointer1 = pointer2
-            currentCell = nextCell
-        }
-        else {   // point in same cell, increm cntr for # pts
-            val areaInfo = mapOfAreas[currentCell]!!
-            areaInfo.incrementEntriesCount()
-        }
-    }
-
-    val duration = Duration.between(list[pointer1].timestamp, list[list.size - 1].timestamp)
-    mapOfAreas[currentCell]!!.timeSpentInArea = mapOfAreas.getOrDefault(currentCell, AreaInfo(Duration.ZERO, 1, list[pointer1].timestamp)).timeSpentInArea.plus(duration)   // add to duration the time spent in the same last hexago
+    val mapOfAreas = Utilities.computeAreaMap(list, res) //AreaInfo useful to store information for each area
 
     // find max
     val mostFrequentedEntry = mapOfAreas.maxByOrNull { it.value.timeSpentInArea } ?: return null
@@ -152,16 +120,6 @@ fun mostFrequentedArea(list: List<WayPoint>, mostFrequentedAreaRadiusKm: Double)
     return Pair(centralWaypoint, mostFrequentedEntry.value.entriesCount)
 }
 
-fun waypointsOutsideGeofence(centre: WayPoint, radius: Double, listOfWayPoints: List<WayPoint>): List<WayPoint> {
-    val outsideWayPoints = mutableListOf<WayPoint>()
-    for (waypoint in listOfWayPoints) {
-        //print("Distanza: ${Utilities.distanceFromWayPoints(centre,waypoint)}")
-        if (Utilities.distanceFromWayPoints(centre, waypoint) > radius) {
-            outsideWayPoints.add(waypoint)
-            //println(waypoint.toString())
-        }
-    }
-    return outsideWayPoints
-}
 
-
+//TODO: do we throw exception for negative radius? or a print statement
+fun waypointsOutsideGeofence(centre: WayPoint, radius: Double, listOfWayPoints: List<WayPoint>): List<WayPoint> = listOfWayPoints.filter { Utilities.distanceFromWayPoints(centre,it)> radius }

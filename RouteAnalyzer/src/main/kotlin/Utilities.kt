@@ -5,10 +5,7 @@ import com.uber.h3core.H3Core
 import java.io.File
 import java.time.Duration
 import java.time.Instant
-import kotlin.math.atan2
-import kotlin.math.cos
-import kotlin.math.sin
-import kotlin.math.sqrt
+import kotlin.math.*
 
 val averageEdgeLengthKm = mapOf( //resolution to edge length Km
     0 to 1281.256, 1 to 483.057, 2 to 182.513,
@@ -57,80 +54,70 @@ object Utilities {
     }
 
     fun computeMostFrequentedAreaRadiusKm(maxDistance: Double, fraction: Int): Double {
-        val result = if (maxDistance < 1) 0.1 else (maxDistance / fraction)
+        require(maxDistance>0)
+        val result:Double = if (maxDistance < 1) 0.1 else (maxDistance / fraction)
         return String.format("%.2f", result).replace(",", ".").toDouble()
     }
 
-    fun calculateCell(lat:Double,longitude:Double,resolution:Int): Long = H3Instance.latLngToCell(lat, longitude, resolution)
+    fun calculateCell(lat:Double,lon:Double,resolution:Int): Long {
+        require(lat in -90.0..90.0) { "Latitude must be between -90 and 90.0" }
+        require(lon in -180.0..180.0) { "Longitude must be between -180 and 180." }
+        require(resolution in 0..15){"Resolution must be between 0 and 15 "}
+        return H3Instance.latLngToCell(lat, lon, resolution)
+    }
 
-    // Todo: Count waypoint in the hexagon
-    //TODO is better to split the functions, one for the maximum and the other for finding the map (idArea,Duration)
-    fun getAreasGivenWaypoints(list: List<WayPoint>, mostFrequentedAreaRadiusKm: Double): Pair<WayPoint, Long>? {
-        // if list  is empty - return null
-        if (list.isEmpty()) return null
+    fun computeResolution(mostFrequentedAreaRadiusKm: Double): Int {
+        val res: Int = averageEdgeLengthKm.minByOrNull { (_, edgeLength) ->
+            abs(edgeLength - mostFrequentedAreaRadiusKm)
+        }?.key!!
+        return res
+    }
 
-        //one element in the list
-        if(list.size == 1) return Pair(list.get(0), 1);
-
-        //calculate the best resolution given the radius
-        var res: Int? = averageEdgeLengthKm.minByOrNull { (_, edgeLength) ->
-            kotlin.math.abs(edgeLength - mostFrequentedAreaRadiusKm)
-        }?.key
-        res = res!!
-        //println("Best resolution: $res")
-
+    fun computeAreaMap(list: List<WayPoint>, res: Int): MutableMap<Long, AreaInfo> {
 
         val mapOfAreas = mutableMapOf<Long, AreaInfo>() //AreaInfo useful to store information for each area
-        //val mapOfAreas = mutableMapOf<Long, Duration>() //AreaInfo useful to store information for each area
+
         var pointer1 = 0
-        var currentCell = calculateCell(list[pointer1].latitude, list[pointer1].longitude, res)
+        var currentCell = Utilities.calculateCell(list[pointer1].latitude, list[pointer1].longitude, res)
         var temp = AreaInfo(Duration.ZERO, 1, list[pointer1].timestamp) // have 1 entry in current cell
+
         mapOfAreas[currentCell] = temp
         //println("here: ${mapOfAreas[currentCell]}")
 
         for (pointer2 in 1 until list.size) {
-            val nextCell = calculateCell(list[pointer2].latitude, list[pointer2].longitude, res)
+            val nextCell = Utilities.calculateCell(list[pointer2].latitude, list[pointer2].longitude, res)
             if (currentCell != nextCell) {  // found point in cell != current cell
 
                 if (nextCell in mapOfAreas) {   // entry in map for next cell, increm cntr for # pts
                     val areaInfo = mapOfAreas[currentCell]!!
                     areaInfo.incrementEntriesCount()
-                }
-                else {  // no entry in map for next cell, create object AreaInfo for next cell
+                } else {  // no entry in map for next cell, create object AreaInfo for next cell
                     temp = AreaInfo(Duration.ZERO, 1, list[pointer2].timestamp)
                     mapOfAreas[nextCell] = temp
                 }
 
                 // for current cell, update timeSpentInArea with new duration
                 val duration = Duration.between(list[pointer1].timestamp, list[pointer2].timestamp)
-                mapOfAreas[currentCell]!!.timeSpentInArea = mapOfAreas.getOrDefault(currentCell, AreaInfo(Duration.ZERO, 1, list[pointer1].timestamp)).timeSpentInArea.plus(duration)
+                mapOfAreas[currentCell]!!.timeSpentInArea =
+                    mapOfAreas.getOrDefault(currentCell, AreaInfo(Duration.ZERO, 1, list[pointer1].timestamp))
+                        .timeSpentInArea.plus(duration)
+
                 pointer1 = pointer2
                 currentCell = nextCell
-            }
-            else {   // point in same cell, increm cntr for # pts
+
+            } else {   // point in same cell, increm cntr for # pts
                 val areaInfo = mapOfAreas[currentCell]!!
                 areaInfo.incrementEntriesCount()
             }
         }
 
         val duration = Duration.between(list[pointer1].timestamp, list[list.size - 1].timestamp)
-        mapOfAreas[currentCell]!!.timeSpentInArea = mapOfAreas.getOrDefault(currentCell, AreaInfo(Duration.ZERO, 1, list[pointer1].timestamp)).timeSpentInArea.plus(duration)   // add to duration the time spent in the same last hexago
-
-        // find max
-        val mostFrequentedEntry = mapOfAreas.maxByOrNull { it.value.timeSpentInArea } ?: return null
-        println("ID of cell (most frequented): ${mostFrequentedEntry.key}")
-
-        val center = H3Instance.cellToLatLng(mostFrequentedEntry.key)
-        /*
-        println("Time spent in the area: ${mostFrequentedEntry.value.timeSpentInArea}")
-        println("Center of most frequented area: $center")
-        println("Number of entries: ${mostFrequentedEntry.value.entriesCount}")
-        println("Timestamp of the first waypoint: ${mostFrequentedEntry.value.timestampFirstPoint}")
-        */
-
-
-        val centralWaypoint =  WayPoint(mostFrequentedEntry.value.timestampFirstPoint, center.lat, center.lng)
-        return Pair(centralWaypoint, mostFrequentedEntry.value.entriesCount)
+        mapOfAreas[currentCell]!!.timeSpentInArea =
+            mapOfAreas.getOrDefault(currentCell, AreaInfo(Duration.ZERO, 1, list[pointer1].timestamp)).timeSpentInArea.plus(
+                duration
+            )   // add to duration the time spent in the same last hexago
+        return mapOfAreas
     }
+
 
 }
