@@ -4,7 +4,7 @@ import org.example.Utilities.computeMostFrequentedAreaRadiusKm
 import java.time.Instant
 import kotlinx.serialization.json.Json
 import java.io.File
-
+import org.example.Utilities.validateJson
 
 fun main(args: Array<String>) {
     val currentDir = System.getProperty("user.dir")
@@ -65,8 +65,18 @@ fun main(args: Array<String>) {
     )
 
     val json = Json { prettyPrint = true }
-    //File("./src/main/resources/json/output.json").writeText(json.encodeToString(output))
-    File("./resources/json/output.json").writeText(json.encodeToString(output))
+    val jsonString = json.encodeToString(output) // Convertiamo l'oggetto in stringa JSON
+
+    val schemaFilePath = "./src/main/resources/validator/output-schema.json"
+
+    val isValid = validateJson(jsonString, schemaFilePath)
+
+    if (isValid) {
+        File("./resources/json/output.json").writeText(jsonString) // Salviamo il JSON solo se è valido
+    } else {
+        println("Il file JSON NON è conforme allo schema!")
+    }
+
 
 }
 
@@ -121,6 +131,6 @@ fun mostFrequentedArea(list: List<WayPoint>, mostFrequentedAreaRadiusKm: Double)
     return Pair(centralWaypoint, mostFrequentedEntry.value.entriesCount)
 }
 
-
 //TODO: do we throw exception for negative radius? or a print statement
 fun waypointsOutsideGeofence(centre: WayPoint, radius: Double, listOfWayPoints: List<WayPoint>): List<WayPoint> = listOfWayPoints.filter { Utilities.distanceFromWayPoints(centre,it)> radius }
+

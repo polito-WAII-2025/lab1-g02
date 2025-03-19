@@ -6,6 +6,11 @@ import java.io.File
 import java.time.Duration
 import java.time.Instant
 import kotlin.math.*
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.github.fge.jsonschema.core.report.ProcessingReport
+import com.github.fge.jsonschema.main.JsonSchemaFactory
+
 
 val averageEdgeLengthKm = mapOf( //resolution to edge length Km
     0 to 1281.256, 1 to 483.057, 2 to 182.513,
@@ -119,5 +124,29 @@ object Utilities {
         return mapOfAreas
     }
 
+    fun validateJson(jsonString: String, schemaFilePath: String): Boolean {
+        val mapper = ObjectMapper()
 
-}
+        // Carica lo schema JSON da file
+        val schemaNode: JsonNode = mapper.readTree(File(schemaFilePath))
+
+        // Converte la stringa JSON in un nodo JSON
+        val jsonNode: JsonNode = mapper.readTree(jsonString)
+
+        // Crea il validatore
+        val schemaFactory = JsonSchemaFactory.byDefault()
+        val schema = schemaFactory.getJsonSchema(schemaNode)
+
+        // Esegui la validazione
+        val report: ProcessingReport = schema.validate(jsonNode)
+
+        // Stampa eventuali errori
+        if (!report.isSuccess) {
+            println("JSON non valido! Errori trovati:")
+            report.forEach { println(it) }
+        } else {
+            println("Output JSON validato")
+        }
+
+        return report.isSuccess
+    }}
