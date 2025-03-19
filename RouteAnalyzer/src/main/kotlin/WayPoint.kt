@@ -22,9 +22,9 @@ object InstantAsLongSerializer : KSerializer<Instant> {
 @Serializable
 data class WayPoint(
     @Serializable(with = InstantAsLongSerializer::class)
-    val timestamp:Instant,
-    val latitude:Double,
-    val longitude:Double
+    val timestamp: Instant,
+    val latitude: Double,
+    val longitude: Double
 ){
     init {
         require(latitude in -90.0..90.0) { "Latitude must be between -90 and 90.0" }
