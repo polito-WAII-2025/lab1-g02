@@ -67,12 +67,12 @@ fun main(args: Array<String>) {
     val json = Json { prettyPrint = true }
     val jsonString = json.encodeToString(output) // Convertiamo l'oggetto in stringa JSON
 
-    val schemaFilePath = "./src/main/resources/validator/output-schema.json"
+    val schemaFilePath = "./evaluation/output-schema.json"
 
     val isValid = validateJson(jsonString, schemaFilePath)
 
     if (isValid) {
-        File("./resources/json/output.json").writeText(jsonString) // Salviamo il JSON solo se è valido
+        File("./evaluation/output.json").writeText(jsonString) // Salviamo il JSON solo se è valido
     } else {
         println("Il file JSON NON è conforme allo schema!")
     }

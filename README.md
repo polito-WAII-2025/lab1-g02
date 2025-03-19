@@ -9,3 +9,5 @@ To run the project execute these commands:
 3) docker run --rm -v ${PWD}/src/main/resources:/app/resources route-analyzer /app/resources/yml/custom-parameters.yml /app/resources/csv/waypoints_v2.csv
 
 
+3) 
+docker run --rm -v ${PWD}/evaluation:/app/resources route-analyzer /app/resources/custom-parameters.yml /app/resources/waypoints_v2.csv
