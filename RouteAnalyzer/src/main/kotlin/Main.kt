@@ -108,14 +108,14 @@ fun mostFrequentedArea(list: List<WayPoint>, mostFrequentedAreaRadiusKm: Double)
 
     // find max
     val mostFrequentedEntry = mapOfAreas.maxByOrNull { it.value.timeSpentInArea } ?: return null
-    println("ID of cell (most frequented): ${mostFrequentedEntry.key}")
 
     val center = Utilities.H3Instance.cellToLatLng(mostFrequentedEntry.key)
+
+    println("ID of cell (most frequented): ${mostFrequentedEntry.key}")
     println("Time spent in the area: ${mostFrequentedEntry.value.timeSpentInArea}")
     println("Center of most frequented area: $center")
     println("Number of entries: ${mostFrequentedEntry.value.entriesCount}")
     println("Timestamp of the first waypoint: ${mostFrequentedEntry.value.timestampFirstPoint}")
-
 
     val centralWaypoint =  WayPoint(mostFrequentedEntry.value.timestampFirstPoint, center.lat, center.lng)
     return Pair(centralWaypoint, mostFrequentedEntry.value.entriesCount)
