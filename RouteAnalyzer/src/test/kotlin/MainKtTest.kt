@@ -7,11 +7,13 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
 import java.io.File
 import java.time.Instant
+import kotlin.test.assertFailsWith
 
 class MainKtTest {
 
  @Test
  fun `it should calculate the max distance correctly`(){
+  val earthRadius = 6371.0
   val waypoints = listOf(
    WayPoint(Instant.ofEpochMilli(1741880932100), 38.11429248311086, 13.355688152939223),
    WayPoint(Instant.ofEpochMilli(1741880932200), 38.11235483569607, 13.356566584233462),
@@ -19,7 +21,7 @@ class MainKtTest {
    WayPoint(Instant.ofEpochMilli(1741880932400), 38.123976205435696, 13.350586306369422),
    WayPoint(Instant.ofEpochMilli(1741880932500), 38.077975395586265, 13.506361780634279)
   )
-  assertEquals(Pair(13.78966971921408,waypoints.last()), maxDistanceFromStart(waypoints))
+  assertEquals(Pair(13.78966971921408,waypoints.last()), maxDistanceFromStart(waypoints,earthRadius))
  }
 
  //TODO
@@ -31,10 +33,11 @@ class MainKtTest {
 
   @Test
   fun `it should calculate the max distance correctly with one element`(){
+   val earthRadius = 6371.0
    val waypoints = listOf(
     WayPoint(Instant.ofEpochMilli(1741880932100), 38.11429248311086, 13.355688152939223)
    )
-   assertEquals(Pair(0.0,waypoints.first()), maxDistanceFromStart(waypoints))
+   assertEquals(Pair(0.0,waypoints.first()), maxDistanceFromStart(waypoints,earthRadius))
   }
 
 
@@ -63,11 +66,14 @@ class MainKtTest {
  }
 
  @Test
- fun `it should calculate the most frequented area correctly with empty list`(){
+ fun `it should calculate the most frequented area correctly with empty list`() {
   val waypoints = emptyList<WayPoint>()
+  assertFailsWith<IllegalArgumentException>(
+   block = {
 
-  assertEquals(null, mostFrequentedArea(waypoints,10.0))
-
+    assertEquals(null, mostFrequentedArea(waypoints, 10.0))
+   }
+  )
  }
 
  @Test
@@ -146,7 +152,7 @@ class MainKtTest {
    WayPoint(Instant.ofEpochMilli(1741880932900), 45.057604236599445, 7.676967429747833),
    WayPoint(Instant.ofEpochMilli(1741880933000), 45.005587835004405, 7.624230609717898)
   )
-  assertEquals(8, waypointsOutsideGeofence(center,radiusKm,listofWayPoints).size)
+  assertEquals(8, waypointsOutsideGeofence(center,radiusKm,listofWayPoints, earthRadiusKm = 6371.0).size)
  }
 
 
@@ -160,7 +166,7 @@ fun `it should calculate the waypointsOutsideGeofence with one element`() {
  val listofWayPoints = listOf(
   WayPoint(Instant.ofEpochMilli(1741880932100), 45.063322311860134, 7.67326179791641),
  )
- assertEquals(1, waypointsOutsideGeofence(center,radiusKm,listofWayPoints).size)
+ assertEquals(1, waypointsOutsideGeofence(center,radiusKm,listofWayPoints,6371.0).size)
 }
 
 
@@ -171,6 +177,6 @@ fun `it should calculate the waypointsOutsideGeofence with 0 element`() {
 
  val radiusKm = 1.94
  val listofWayPoints = emptyList<WayPoint>()
- assertEquals(0, waypointsOutsideGeofence(center,radiusKm,listofWayPoints).size)
+ assertEquals(0, waypointsOutsideGeofence(center,radiusKm,listofWayPoints,6371.0).size)
 }
 }
