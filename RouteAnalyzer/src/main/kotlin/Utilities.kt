@@ -21,6 +21,7 @@ object Utilities {
     val H3Instance: H3Core =  H3Core.newInstance()
 
     fun distanceFromWayPoints(point1: WayPoint, point2: WayPoint, earthRadiusKm: Double): Double {
+        require(earthRadiusKm > 0) {"Radius must be positive."}
         val dLat = deg2rad(point2.latitude - point1.latitude)  // deg2rad below
         val dLon = deg2rad(point2.longitude - point1.longitude)
 

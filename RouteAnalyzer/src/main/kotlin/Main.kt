@@ -107,7 +107,6 @@ fun maxDistanceFromStart(waypoints: List<WayPoint>, earthRadiusKm: Double):  Pai
     return Pair(max, mostDistantWaypoint)
 }
 
-//TODO is better to split the functions, one for the maximum and the other for finding the map (idArea,Duration)
 fun mostFrequentedArea(list: List<WayPoint>, mostFrequentedAreaRadiusKm: Double): Pair<WayPoint, Long>? {
 
     // list empty
@@ -150,7 +149,6 @@ fun mostFrequentedArea(list: List<WayPoint>, mostFrequentedAreaRadiusKm: Double)
     }
 }
 
-//TODO: do we throw exception for negative radius? or a print statement
 fun waypointsOutsideGeofence(centre: WayPoint, radius: Double, listOfWayPoints: List<WayPoint>, earthRadiusKm: Double): List<WayPoint> {
     require(radius > 0) { "Error in function waypointsOutsideGeofence: Radius must be greater than zero." }
     return listOfWayPoints.filter { Utilities.distanceFromWayPoints(centre, it, earthRadiusKm) > radius }
