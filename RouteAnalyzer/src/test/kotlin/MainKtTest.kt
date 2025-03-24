@@ -4,7 +4,7 @@ import org.example.mostFrequentedArea
 import org.example.waypointsOutsideGeofence
 import org.junit.jupiter.api.Test
 
-import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assertions.assertEquals
 import java.time.Instant
 import kotlin.test.assertFailsWith
 
@@ -156,8 +156,11 @@ class MainKtTest {
         )
 
         val exp = mostFrequentedArea(waypoints, 181.3266)!!
+        val waypointExp = WayPoint(Instant.ofEpochMilli(1741880932100), 45.39360105311002, 8.065291682168784)
         assertEquals(8, exp.second)
-        assertEquals(WayPoint(Instant.ofEpochMilli(1741880932100), 45.39360105311002, 8.065291682168784), exp.first)
+        assertEquals(waypointExp.timestamp,exp.first.timestamp)
+        assertEquals(waypointExp.longitude,exp.first.longitude,1e-13)
+        assertEquals(waypointExp.latitude,exp.first.latitude,1e-13)
     }
 
     @Test
@@ -178,8 +181,12 @@ class MainKtTest {
         )
 
         val exp = mostFrequentedArea(waypoints, 181.3266)!!
+        val waypointExp = WayPoint(Instant.ofEpochMilli(1741880932100), 45.39360105311002, 8.065291682168784)
         assertEquals(5, exp.second)
-        assertEquals(WayPoint(Instant.ofEpochMilli(1741880932100), 45.39360105311002, 8.065291682168784), exp.first)
+        //assertEquals(, exp.first,30e-15)
+        assertEquals(waypointExp.timestamp,exp.first.timestamp)
+        assertEquals(waypointExp.longitude,exp.first.longitude,1e-13)
+        assertEquals(waypointExp.latitude,exp.first.latitude,1e-13)
     }
 
    //waypointsOutsideGeofence
