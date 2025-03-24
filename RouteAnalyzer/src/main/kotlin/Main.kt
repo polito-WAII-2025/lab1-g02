@@ -5,6 +5,7 @@ import java.time.Instant
 import kotlinx.serialization.json.Json
 import java.io.File
 import org.example.Utilities.validateJson
+import java.time.Duration
 
 fun main(args: Array<String>) {
     val currentDir = System.getProperty("user.dir")
@@ -65,16 +66,14 @@ fun main(args: Array<String>) {
     )
 
     val json = Json { prettyPrint = true }
-    val jsonString = json.encodeToString(output) // Convertiamo l'oggetto in stringa JSON
+    val jsonString = json.encodeToString(output)
 
     val schemaFilePath = "./evaluation/output-schema.json"
 
     val isValid = validateJson(jsonString, schemaFilePath)
 
     if (isValid) {
-        File("./evaluation/output.json").writeText(jsonString) // Salviamo il JSON solo se è valido
-    } else {
-        println("Il file JSON NON è conforme allo schema!")
+        File("./evaluation/output.json").writeText(jsonString)
     }
 
     //extra feature
@@ -88,7 +87,12 @@ fun main(args: Array<String>) {
         )
     )
     val jsonStringAdvanced = json.encodeToString(advancedOutput)
-    File("./evaluation/output_advanced.json").writeText(jsonStringAdvanced)
+    val schemaFilePathAdvanced = "./evaluation/output_advanced-schema.json"
+    val isValidAdvanced = validateJson(jsonStringAdvanced, schemaFilePathAdvanced)
+    if (isValidAdvanced) {
+        File("./evaluation/output_advanced.json").writeText(jsonStringAdvanced)
+    }
+
 }
 
 //Calculate the farthest distance from the starting point of the route.
@@ -104,8 +108,6 @@ fun maxDistanceFromStart(waypoints: List<WayPoint>): Pair<Double, WayPoint> {
 
         val d = Utilities.distanceFromWayPoints(startingPoint, waypoint)
 
-        //println("Distanza da (${startingPoint.lat}, ${startingPoint.longitude}) a (${waypoint.lat}, ${waypoint.longitude}) = %.3f km".format(d))
-
         if (d > max) {
             max = d
             mostDistantWaypoint = waypoint
@@ -114,7 +116,10 @@ fun maxDistanceFromStart(waypoints: List<WayPoint>): Pair<Double, WayPoint> {
     return Pair(max, mostDistantWaypoint)
 }
 
-fun mostFrequentedArea(list: List<WayPoint>, mostFrequentedAreaRadiusKm: Double): Pair<WayPoint, Long>? {
+fun mostFrequentedArea(list: List<WayPoint>, mostFrequentedAreaRadiusKm: Double) = frequentedArea(list, mostFrequentedAreaRadiusKm){it.value.timeSpentInArea.toMillis()}
+fun lessFrequentedArea(list: List<WayPoint>, mostFrequentedAreaRadiusKm: Double) = frequentedArea(list, mostFrequentedAreaRadiusKm){-it.value.timeSpentInArea.toMillis()}
+
+fun frequentedArea(list: List<WayPoint>, mostFrequentedAreaRadiusKm: Double, selector:(Map.Entry<Long, AreaInfo>) -> Long): Pair<WayPoint, Long>? {
 
     // list empty
     if (list.isEmpty()) return null
@@ -127,7 +132,7 @@ fun mostFrequentedArea(list: List<WayPoint>, mostFrequentedAreaRadiusKm: Double)
     val mapOfAreas = Utilities.computeAreaMap(list, res) //AreaInfo useful to store information for each area
 
     // find max
-    val mostFrequentedEntry = mapOfAreas.maxByOrNull { it.value.timeSpentInArea } ?: return null
+    val mostFrequentedEntry = mapOfAreas.maxByOrNull(selector) ?: return null
     println("ID of cell (most frequented): ${mostFrequentedEntry.key}")
 
     val center = Utilities.H3Instance.cellToLatLng(mostFrequentedEntry.key)
@@ -143,30 +148,3 @@ fun mostFrequentedArea(list: List<WayPoint>, mostFrequentedAreaRadiusKm: Double)
 
 //TODO: do we throw exception for negative radius? or a print statement
 fun waypointsOutsideGeofence(centre: WayPoint, radius: Double, listOfWayPoints: List<WayPoint>): List<WayPoint> = listOfWayPoints.filter { Utilities.distanceFromWayPoints(centre,it)> radius }
-
-fun lessFrequentedArea(list: List<WayPoint>, lessFrequentedAreaRadiusKm: Double): Pair<WayPoint, Long>? {
-
-    // list empty
-    if (list.isEmpty()) return null
-    //one element in the list
-    if(list.size == 1) return Pair(list[0], 1)
-
-    //calculate the best resolution given the radius
-    val res: Int = Utilities.computeResolution(lessFrequentedAreaRadiusKm)
-
-    val mapOfAreas = Utilities.computeAreaMap(list, res) //AreaInfo useful to store information for each area
-
-    // find min
-    val lessFrequentedEntry = mapOfAreas.minByOrNull { it.value.timeSpentInArea } ?: return null
-    println("ID of cell (most frequented): ${lessFrequentedEntry.key}")
-
-    val center = Utilities.H3Instance.cellToLatLng(lessFrequentedEntry.key)
-    println("Time spent in the area: ${lessFrequentedEntry.value.timeSpentInArea}")
-    println("Center of most frequented area: $center")
-    println("Number of entries: ${lessFrequentedEntry.value.entriesCount}")
-    println("Timestamp of the first waypoint: ${lessFrequentedEntry.value.timestampFirstPoint}")
-
-
-    val centralWaypoint =  WayPoint(lessFrequentedEntry.value.timestampFirstPoint, center.lat, center.lng)
-    return Pair(centralWaypoint, lessFrequentedEntry.value.entriesCount)
-}

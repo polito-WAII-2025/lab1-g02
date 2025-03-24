@@ -127,25 +127,20 @@ object Utilities {
     fun validateJson(jsonString: String, schemaFilePath: String): Boolean {
         val mapper = ObjectMapper()
 
-        // Carica lo schema JSON da file
         val schemaNode: JsonNode = mapper.readTree(File(schemaFilePath))
 
-        // Converte la stringa JSON in un nodo JSON
         val jsonNode: JsonNode = mapper.readTree(jsonString)
 
-        // Crea il validatore
         val schemaFactory = JsonSchemaFactory.byDefault()
         val schema = schemaFactory.getJsonSchema(schemaNode)
 
-        // Esegui la validazione
         val report: ProcessingReport = schema.validate(jsonNode)
 
-        // Stampa eventuali errori
         if (!report.isSuccess) {
-            println("JSON non valido! Errori trovati:")
+            println("JSON not validated correctly")
             report.forEach { println(it) }
         } else {
-            println("Output JSON validato")
+            println("Output JSON validated")
         }
 
         return report.isSuccess
