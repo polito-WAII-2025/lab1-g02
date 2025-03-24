@@ -5,7 +5,6 @@ import java.time.Instant
 import kotlinx.serialization.json.Json
 import java.io.File
 import org.example.Utilities.validateJson
-import java.time.Duration
 
 fun main(args: Array<String>) {
     val currentDir = System.getProperty("user.dir")
@@ -77,13 +76,13 @@ fun main(args: Array<String>) {
     }
 
     //extra feature
-    val (lessCentralWayPoint, lessEntriesCount) = lessFrequentedArea(waypointsList, customParameters.mostFrequentedAreaRadiusKm!!) ?: Pair(WayPoint(Instant.now(), 0.0, 0.0), 0L)
+    val (leastCentralWayPoint, leastEntriesCount) = leastFrequentedArea(waypointsList, customParameters.mostFrequentedAreaRadiusKm!!) ?: Pair(WayPoint(Instant.now(), 0.0, 0.0), 0L)
 
     val advancedOutput = OutputJsonAdvanced(
-        lessFrequentedArea = FrequentedArea(
-            lessCentralWayPoint,
+        leastFrequentedArea = FrequentedArea(
+            leastCentralWayPoint,
             customParameters.mostFrequentedAreaRadiusKm!!,
-            lessEntriesCount
+            leastEntriesCount
         )
     )
     val jsonStringAdvanced = json.encodeToString(advancedOutput)
@@ -117,7 +116,7 @@ fun maxDistanceFromStart(waypoints: List<WayPoint>): Pair<Double, WayPoint> {
 }
 
 fun mostFrequentedArea(list: List<WayPoint>, mostFrequentedAreaRadiusKm: Double) = frequentedArea(list, mostFrequentedAreaRadiusKm){it.value.timeSpentInArea.toMillis()}
-fun lessFrequentedArea(list: List<WayPoint>, mostFrequentedAreaRadiusKm: Double) = frequentedArea(list, mostFrequentedAreaRadiusKm){-it.value.timeSpentInArea.toMillis()}
+fun leastFrequentedArea(list: List<WayPoint>, mostFrequentedAreaRadiusKm: Double) = frequentedArea(list, mostFrequentedAreaRadiusKm){-it.value.timeSpentInArea.toMillis()}
 
 fun frequentedArea(list: List<WayPoint>, mostFrequentedAreaRadiusKm: Double, selector:(Map.Entry<Long, AreaInfo>) -> Long): Pair<WayPoint, Long>? {
 

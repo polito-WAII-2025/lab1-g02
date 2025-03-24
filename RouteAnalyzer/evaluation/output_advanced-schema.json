@@ -3,7 +3,7 @@
   "title": "output_advanced.json file schema",
   "type": "object",
   "properties": {
-    "lessFrequentedArea": {
+    "leastFrequentedArea": {
       "type": "object",
       "properties": {
         "centralWaypoint": {
@@ -40,6 +40,6 @@
     }
   },
   "required": [
-    "lessFrequentedArea"
+    "leastFrequentedArea"
   ]
 }

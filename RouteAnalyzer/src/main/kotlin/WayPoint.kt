@@ -62,5 +62,5 @@ data class WaypointsOutsideGeofence(
 
 @Serializable
 data class OutputJsonAdvanced(
-    val lessFrequentedArea: FrequentedArea,
+    val leastFrequentedArea: FrequentedArea,
 )
