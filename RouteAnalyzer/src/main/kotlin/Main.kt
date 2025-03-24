@@ -4,7 +4,7 @@ import org.example.Utilities.computeMostFrequentedAreaRadiusKm
 import java.time.Instant
 import kotlinx.serialization.json.Json
 import java.io.File
-
+import org.example.Utilities.validateJson
 
 fun main(args: Array<String>) {
 
@@ -30,10 +30,11 @@ fun main(args: Array<String>) {
         val (maxDistance, mostDistantWaypoint) = maxDistanceFromStart(waypointsList, customParameters.earthRadiusKm)
         println("Max distance from start: ${maxDistance}, Point: $mostDistantWaypoint")
 
-
-        customParameters.mostFrequentedAreaRadiusKm ?: customParameters.setMostFrequentedAreaRadiusKm(
-            computeMostFrequentedAreaRadiusKm(maxDistance, 10)
-        )
+    //TODO ask what to do with exceptions inside the main
+    customParameters.mostFrequentedAreaRadiusKm ?: run {
+        val mostFrequentedAreaRadiusKm = computeMostFrequentedAreaRadiusKm(maxDistance, 10)
+        customParameters.setMostFrequentedAreaRadiusKm(mostFrequentedAreaRadiusKm)
+    }
 
         // func 2
         val (centralWayPoint, entriesCount) = mostFrequentedArea(
@@ -57,7 +58,7 @@ fun main(args: Array<String>) {
                 mostDistantWaypoint,
                 maxDistance
             ),
-            mostFrequentedArea = MostFrequentedArea(
+            mostFrequentedArea = FrequentedArea(
                 centralWayPoint,
                 customParameters.mostFrequentedAreaRadiusKm!!,
                 entriesCount
@@ -72,8 +73,34 @@ fun main(args: Array<String>) {
         )
 
         val json = Json { prettyPrint = true }
+        val jsonString = json.encodeToString(output)
         //File("./src/main/resources/json/output.json").writeText(json.encodeToString(output)) //RUN from command line
-        File("./resources/json/output.json").writeText(json.encodeToString(output)) //RUN WITH DOCKER!
+        //File("./resources/json/output.json").writeText(json.encodeToString(output)) //RUN WITH DOCKER!
+
+        val schemaFilePath = "./evaluation/output-schema.json"
+
+        val isValid = validateJson(jsonString, schemaFilePath)
+
+        if (isValid) {
+            File("./evaluation/output.json").writeText(jsonString)
+        }
+
+        //extra feature
+        val (leastCentralWayPoint, leastEntriesCount) = leastFrequentedArea(waypointsList, customParameters.mostFrequentedAreaRadiusKm!!) ?: Pair(WayPoint(Instant.now(), 0.0, 0.0), 0L)
+
+        val advancedOutput = OutputJsonAdvanced(
+            leastFrequentedArea = FrequentedArea(
+                leastCentralWayPoint,
+                customParameters.mostFrequentedAreaRadiusKm!!,
+                leastEntriesCount
+            )
+        )
+        val jsonStringAdvanced = json.encodeToString(advancedOutput)
+        val schemaFilePathAdvanced = "./evaluation/output_advanced-schema.json"
+        val isValidAdvanced = validateJson(jsonStringAdvanced, schemaFilePathAdvanced)
+        if (isValidAdvanced) {
+            File("./evaluation/output_advanced.json").writeText(jsonStringAdvanced)
+        }
     }
     catch (e: Exception) {
         println(e)
@@ -107,7 +134,10 @@ fun maxDistanceFromStart(waypoints: List<WayPoint>, earthRadiusKm: Double):  Pai
     return Pair(max, mostDistantWaypoint)
 }
 
-fun mostFrequentedArea(list: List<WayPoint>, mostFrequentedAreaRadiusKm: Double): Pair<WayPoint, Long>? {
+fun mostFrequentedArea(list: List<WayPoint>, mostFrequentedAreaRadiusKm: Double) = frequentedArea(list, mostFrequentedAreaRadiusKm){it.value.timeSpentInArea.toMillis()}
+fun leastFrequentedArea(list: List<WayPoint>, mostFrequentedAreaRadiusKm: Double) = frequentedArea(list, mostFrequentedAreaRadiusKm){-it.value.timeSpentInArea.toMillis()}
+
+fun frequentedArea(list: List<WayPoint>, mostFrequentedAreaRadiusKm: Double, selector:(Map.Entry<Long, AreaInfo>) -> Long): Pair<WayPoint, Long>? {
 
     // list empty
     if (list.isEmpty()) {
@@ -129,9 +159,9 @@ fun mostFrequentedArea(list: List<WayPoint>, mostFrequentedAreaRadiusKm: Double)
 
         val mapOfAreas = Utilities.computeAreaMap(list, res) //AreaInfo useful to store information for each area
 
-        // find max
-        val mostFrequentedEntry = mapOfAreas.maxByOrNull { it.value.timeSpentInArea } ?: return null
-        println("ID of cell (most frequented): ${mostFrequentedEntry.key}")
+    // find max
+    val mostFrequentedEntry = mapOfAreas.maxByOrNull(selector) ?: return null
+    println("ID of cell (most frequented): ${mostFrequentedEntry.key}")
 
         val center = Utilities.H3Instance.cellToLatLng(mostFrequentedEntry.key)
         println("Time spent in the area: ${mostFrequentedEntry.value.timeSpentInArea}")

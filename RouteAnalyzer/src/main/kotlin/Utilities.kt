@@ -7,6 +7,11 @@ import java.io.FileNotFoundException
 import java.time.Duration
 import java.time.Instant
 import kotlin.math.*
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.github.fge.jsonschema.core.report.ProcessingReport
+import com.github.fge.jsonschema.main.JsonSchemaFactory
+
 
 val averageEdgeLengthKm = mapOf( //resolution to edge length Km
     0 to 1281.256, 1 to 483.057, 2 to 182.513,
@@ -168,5 +173,24 @@ object Utilities {
         return mapOfAreas
     }
 
+    fun validateJson(jsonString: String, schemaFilePath: String): Boolean {
+        val mapper = ObjectMapper()
 
-}
+        val schemaNode: JsonNode = mapper.readTree(File(schemaFilePath))
+
+        val jsonNode: JsonNode = mapper.readTree(jsonString)
+
+        val schemaFactory = JsonSchemaFactory.byDefault()
+        val schema = schemaFactory.getJsonSchema(schemaNode)
+
+        val report: ProcessingReport = schema.validate(jsonNode)
+
+        if (!report.isSuccess) {
+            println("JSON not validated correctly")
+            report.forEach { println(it) }
+        } else {
+            println("Output JSON validated")
+        }
+
+        return report.isSuccess
+    }}

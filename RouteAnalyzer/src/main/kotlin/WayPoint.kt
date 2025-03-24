@@ -35,7 +35,7 @@ data class WayPoint(
 @Serializable
 data class OutputJson(
     val maxDistanceFromStart: MaxDistanceFromStart,
-    val mostFrequentedArea: MostFrequentedArea,
+    val mostFrequentedArea: FrequentedArea,
     val waypointsOutsideGeofence: WaypointsOutsideGeofence
 )
 
@@ -46,7 +46,7 @@ data class MaxDistanceFromStart(
 )
 
 @Serializable
-data class MostFrequentedArea(
+data class FrequentedArea(
     val centralWaypoint: WayPoint,
     val areaRadiusKm: Double,
     val entriesCount: Long
@@ -58,4 +58,9 @@ data class WaypointsOutsideGeofence(
     val areaRadiusKm: Double,
     val count: Int,
     val waypoints: List<WayPoint>
+)
+
+@Serializable
+data class OutputJsonAdvanced(
+    val leastFrequentedArea: FrequentedArea,
 )

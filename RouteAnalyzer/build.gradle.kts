@@ -17,6 +17,9 @@ dependencies {
     implementation("com.uber:h3:4.1.1")
     implementation("com.charleskorn.kaml:kaml:0.72.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0")
+    implementation("com.github.java-json-tools:json-schema-validator:2.2.14")
+
+
 }
 
 tasks.jar {
