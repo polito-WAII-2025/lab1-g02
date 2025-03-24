@@ -2,12 +2,8 @@
 # lab1-wa2025
 
 
-To run the project execute these commands:
+To run the project execute the following commands in order:
 
 1) ./gradlew clean build
 2) docker build -t route-analyzer .
-3) docker run --rm -v ${PWD}/src/main/resources:/app/resources route-analyzer /app/resources/yml/custom-parameters.yml /app/resources/csv/waypoints_v2.csv
-
-
-3) 
-docker run --rm -v ${PWD}/evaluation:/app/resources route-analyzer /app/resources/custom-parameters.yml /app/resources/waypoints_v2.csv
+3) docker run --rm -v ${PWD}/evaluation:/app/resources route-analyzer /app/resources/custom-parameters.yml /app/resources/waypoints_v2.csv
