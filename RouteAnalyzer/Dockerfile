@@ -17,5 +17,7 @@ COPY src ./src
 #CMD ["./gradlew", "shadowJar"]
 RUN gradle build --no-daemon
 
+ENV RUNNING_IN_DOCKER=true
+
 # command to start the container
 ENTRYPOINT ["java", "-jar", "build/libs/RouteAnalyzer-1.0-SNAPSHOT-all.jar"]

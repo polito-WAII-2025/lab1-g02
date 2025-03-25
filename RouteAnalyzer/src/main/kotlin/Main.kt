@@ -8,6 +8,8 @@ import org.example.Utilities.validateJson
 
 fun main(args: Array<String>) {
 
+    val isRunningInDocker = System.getenv("RUNNING_IN_DOCKER")?.toBoolean() ?: false
+
     if (args.size != 2) {
         println(
         """
@@ -73,12 +75,12 @@ fun main(args: Array<String>) {
         val json = Json { prettyPrint = true }
         val jsonString = json.encodeToString(output)
 
-        val schemaFilePath = "./resources/output-schema.json" //RUN WITH DOCKER!
+        val schemaFilePath = if (isRunningInDocker) "./evaluation/output-schema.json" else "../evaluation/output-schema.json"
 
         val isValid = validateJson(jsonString, schemaFilePath)
         if (isValid) {
-            //File("./evaluation/output.json").writeText(jsonString)
-            File("./resources/output.json").writeText(json.encodeToString(output)) //RUN WITH DOCKER!
+            val outputPath = if (isRunningInDocker) "./evaluation/output.json" else "../evaluation/output.json"
+            File(outputPath).writeText(json.encodeToString(output))
         }
 
         //extra feature - function leastFrequentedArea(), computes the least frequented area given a list of waypoints and a radius value
@@ -92,11 +94,12 @@ fun main(args: Array<String>) {
             )
         )
         val jsonStringAdvanced = json.encodeToString(advancedOutput)
-        val schemaFilePathAdvanced = "./resources/output_advanced-schema.json" //RUN WITH DOCKER!
+        val schemaFilePathAdvanced = if (isRunningInDocker) "./evaluation/output_advanced-schema.json" else "../evaluation/output_advanced-schema.json"
+
         val isValidAdvanced = validateJson(jsonStringAdvanced, schemaFilePathAdvanced)
         if (isValidAdvanced) {
-            //File("./evaluation/output_advanced.json").writeText(jsonStringAdvanced)
-            File("./resources/output_advanced.json").writeText(jsonStringAdvanced)//RUN WITH DOCKER!
+            val outputPathAdvanced = if (isRunningInDocker) "./evaluation/output_advanced.json" else "../evaluation/output_advanced.json"
+            File(outputPathAdvanced).writeText(jsonStringAdvanced)
         }
     }
     catch (e: Exception) {
@@ -149,7 +152,7 @@ fun frequentedArea(list: List<WayPoint>, mostFrequentedAreaRadiusKm: Double, sel
         return Pair(list.first(), 1)
     }
 
-    val res: Int;
+    val res: Int
     try {
         //calculate the best resolution given the radius
         res = Utilities.computeResolution(mostFrequentedAreaRadiusKm)
