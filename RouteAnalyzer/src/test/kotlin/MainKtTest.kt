@@ -1,7 +1,4 @@
-import org.example.WayPoint
-import org.example.maxDistanceFromStart
-import org.example.mostFrequentedArea
-import org.example.waypointsOutsideGeofence
+import org.example.*
 import org.junit.jupiter.api.Test
 
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -257,6 +254,127 @@ class MainKtTest {
             WayPoint(Instant.ofEpochMilli(1741880932600), 45.06184462578261, 7.645947484988113) //center
         );
         assertEquals(3, waypointsOutsideGeofence(center, radiusKm, listOfWayPoints, 6371.0).size)
+    }
+
+    //leastFrequentedArea
+    @Test
+    fun `leastFrequentedArea() - it should calculate the least frequented area correctly with all points in one area`() {
+        val waypoints = listOf(
+            WayPoint(Instant.ofEpochMilli(1741880932100), 38.11429248311086, 13.355688152939223),
+            WayPoint(Instant.ofEpochMilli(1741880932200), 38.11235483569607, 13.356566584233462),
+            WayPoint(Instant.ofEpochMilli(1741880932300), 38.11940278368584, 13.34126787746348),
+            WayPoint(Instant.ofEpochMilli(1741880932400), 38.123976205435696, 13.350586306369422),
+            WayPoint(Instant.ofEpochMilli(1741880932500), 38.077975395586265, 13.506361780634279),
+            WayPoint(Instant.ofEpochMilli(1741880932600), 38.094138408149774, 13.389413697921668),
+            WayPoint(Instant.ofEpochMilli(1741880932700), 38.0915686354094, 13.44239062643706),
+            WayPoint(Instant.ofEpochMilli(1741880932800), 38.07716094904629, 13.416532829098458),
+            WayPoint(Instant.ofEpochMilli(1741880932900), 38.085387219886, 13.37606146272421),
+            WayPoint(Instant.ofEpochMilli(1741880933000), 38.09233991479462, 13.415244881980243)
+        )
+
+        val expected = WayPoint(Instant.ofEpochMilli(1741880932100), 39.196323196541094, 13.883693715915664)
+        val actual = leastFrequentedArea(waypoints, 192.5503)!!
+
+        assertEquals(expected.timestamp, actual.first.timestamp)
+        assertEquals(expected.latitude, actual.first.latitude, 1e-6) // Tolleranza per i decimali
+        assertEquals(expected.longitude, actual.first.longitude, 1e-6)
+        assertEquals(10, actual.second)
+    }
+
+
+    @Test
+    fun `leastFrequentedArea() - it should calculate the least frequented area correctly with empty list of waypoints`() {
+        val waypoints = emptyList<WayPoint>()
+        assertFailsWith(IllegalArgumentException::class) {
+            leastFrequentedArea(waypoints, 10.0)
+        }
+    }
+
+    @Test
+    fun `leastFrequentedArea() - it should throw IllegalArgumentException since mostFrequentedAreaRadiusKm is less than 0`() {
+        val waypoints = listOf(
+            WayPoint(Instant.ofEpochMilli(1741880932100), 38.11429248311086, 13.355688152939223),
+            WayPoint(Instant.ofEpochMilli(1741880932200), 38.11235483569607, 13.356566584233462),
+        )
+        assertFailsWith(IllegalArgumentException::class) {
+            leastFrequentedArea(waypoints, -10.0)
+        }
+    }
+
+    @Test
+    fun `leastFrequentedArea() - it should throw IllegalArgumentException since mostFrequentedAreaRadiusKm is equal to 0`() {
+        val waypoints = listOf(
+            WayPoint(Instant.ofEpochMilli(1741880932100), 38.11429248311086, 13.355688152939223),
+            WayPoint(Instant.ofEpochMilli(1741880932200), 38.11235483569607, 13.356566584233462),
+        )
+        assertFailsWith(IllegalArgumentException::class) {
+            leastFrequentedArea(waypoints, 0.0)
+        }
+    }
+
+    @Test
+    fun `leastFrequentedArea() - it should calculate the least frequented area with one element in the list of waypoints`() {
+        val waypoints = listOf(
+            WayPoint(Instant.ofEpochMilli(1741880932100), 38.11429248311086, 13.355688152939223),
+        )
+        val exp = leastFrequentedArea(waypoints, 192.5503)!!
+        assertEquals(1, exp.second)
+        assertEquals(waypoints.first(), exp.first)
+    }
+
+    @Test
+    fun `leastFrequentedArea() - it should calculate the least frequented area with waypoints in two areas`() {
+        val waypoints = listOf(
+            //points of the first area
+            WayPoint(Instant.ofEpochMilli(1741880932150), 38.11429248311086, 13.355688152939223),
+            WayPoint(Instant.ofEpochMilli(1741880932250), 38.11235483569607, 13.356566584233462),
+            WayPoint(Instant.ofEpochMilli(1741880932350), 38.11940278368584, 13.34126787746348),
+            WayPoint(Instant.ofEpochMilli(1741880932450), 38.123976205435696, 13.350586306369422),
+            WayPoint(Instant.ofEpochMilli(1741880933000), 38.09233991479462, 13.415244881980243),
+            //points of the second area
+            WayPoint(Instant.ofEpochMilli(1741880932100), 45.14723641065018, 7.601668317663126),
+            WayPoint(Instant.ofEpochMilli(1741880932200), 45.23284958868609, 7.8230585364983085),
+            WayPoint(Instant.ofEpochMilli(1741880932300), 45.15389058270617, 7.848421054719893),
+            WayPoint(Instant.ofEpochMilli(1741880932400), 45.22040387156477, 7.644787604965472),
+            WayPoint(Instant.ofEpochMilli(1741880932500), 45.09678945865113, 7.711030483090525),
+            WayPoint(Instant.ofEpochMilli(1741880932600), 45.11393734222398, 7.859227360588392),
+            WayPoint(Instant.ofEpochMilli(1741880932700), 45.08541595753641, 7.9424001308222785),
+            WayPoint(Instant.ofEpochMilli(1741880932800), 45.03207041467067, 7.6878955468685035)
+        )
+
+        val exp = leastFrequentedArea(waypoints, 181.3266)!!
+        val waypointExp = WayPoint(Instant.ofEpochMilli(1741880932150), 39.196323196541094, 13.883693715915664)
+        assertEquals(5, exp.second)
+        assertEquals(waypointExp.timestamp,exp.first.timestamp)
+        assertEquals(waypointExp.longitude,exp.first.longitude,1e-13)
+        assertEquals(waypointExp.latitude,exp.first.latitude,1e-13)
+    }
+
+    @Test
+    fun `leastFrequentedArea() - it should calculate the most frequented area with two min areas`() {
+        val waypoints = listOf(
+            //points of the first area
+            WayPoint(Instant.ofEpochMilli(1741880932150), 38.11429248311086, 13.355688152939223),
+            WayPoint(Instant.ofEpochMilli(1741880932250), 38.11235483569607, 13.356566584233462),
+            WayPoint(Instant.ofEpochMilli(1741880932350), 38.11940278368584, 13.34126787746348),
+            WayPoint(Instant.ofEpochMilli(1741880932450), 38.123976205435696, 13.350586306369422),
+            WayPoint(Instant.ofEpochMilli(1741880933000), 38.09233991479462, 13.415244881980243),
+            //points of the second area
+            WayPoint(Instant.ofEpochMilli(1741880932100), 45.14723641065018, 7.601668317663126),
+            WayPoint(Instant.ofEpochMilli(1741880932200), 45.23284958868609, 7.8230585364983085),
+            WayPoint(Instant.ofEpochMilli(1741880932300), 45.15389058270617, 7.848421054719893),
+            WayPoint(Instant.ofEpochMilli(1741880932400), 45.22040387156477, 7.644787604965472),
+            WayPoint(Instant.ofEpochMilli(1741880932500), 45.09678945865113, 7.711030483090525),
+
+            )
+
+        val exp = mostFrequentedArea(waypoints, 181.3266)!!
+        val waypointExp = WayPoint(Instant.ofEpochMilli(1741880932100), 45.39360105311002, 8.065291682168784)
+        assertEquals(5, exp.second)
+        //assertEquals(, exp.first,30e-15)
+        assertEquals(waypointExp.timestamp,exp.first.timestamp)
+        assertEquals(waypointExp.longitude,exp.first.longitude,1e-13)
+        assertEquals(waypointExp.latitude,exp.first.latitude,1e-13)
     }
 
 }

@@ -26,23 +26,22 @@ fun main(args: Array<String>) {
         //read CSV file
         val waypointsList = Utilities.readCsv(args[1])
 
-        // func 1
+        // func 1 - maxDistanceFromStart
         val (maxDistance, mostDistantWaypoint) = maxDistanceFromStart(waypointsList, customParameters.earthRadiusKm)
         println("Max distance from start: ${maxDistance}, Point: $mostDistantWaypoint")
 
-    //TODO ask what to do with exceptions inside the main
-    customParameters.mostFrequentedAreaRadiusKm ?: run {
-        val mostFrequentedAreaRadiusKm = computeMostFrequentedAreaRadiusKm(maxDistance, 10)
-        customParameters.setMostFrequentedAreaRadiusKm(mostFrequentedAreaRadiusKm)
-    }
+        customParameters.mostFrequentedAreaRadiusKm ?: run {
+            val mostFrequentedAreaRadiusKm = computeMostFrequentedAreaRadiusKm(maxDistance, 10)
+            customParameters.setMostFrequentedAreaRadiusKm(mostFrequentedAreaRadiusKm)
+        }
 
-        // func 2
+        // func 2 - mostFrequentedArea
         val (centralWayPoint, entriesCount) = mostFrequentedArea(
             waypointsList,
             customParameters.mostFrequentedAreaRadiusKm!!
         ) ?: Pair(WayPoint(Instant.now(), 0.0, 0.0), 0L)
 
-        // func 3
+        // func 3 - waypointsOutsideGeofence
         val wayPointGeofence = WayPoint(
             Instant.ofEpochMilli(0),
             customParameters.geofenceCenterLatitude,
@@ -50,9 +49,9 @@ fun main(args: Array<String>) {
         )
         val listWaypointsOutsideGeofence = waypointsOutsideGeofence(wayPointGeofence, customParameters.geofenceRadiusKm, waypointsList, customParameters.earthRadiusKm)
 
-        println("Number of points outside Geofence: " + "${listWaypointsOutsideGeofence.size}")
+        println("Number of waypoints outside Geofence: " + "${listWaypointsOutsideGeofence.size}")
 
-        //write results in the output.json file
+        //write results of func 1, func 2 and func 3 in the file output.json
         val output = OutputJson(
             maxDistanceFromStart = MaxDistanceFromStart(
                 mostDistantWaypoint,
@@ -68,24 +67,21 @@ fun main(args: Array<String>) {
                 customParameters.geofenceRadiusKm,
                 listWaypointsOutsideGeofence.size,
                 listWaypointsOutsideGeofence
-
             )
         )
 
         val json = Json { prettyPrint = true }
         val jsonString = json.encodeToString(output)
-        //File("./src/main/resources/json/output.json").writeText(json.encodeToString(output)) //RUN from command line
-        //File("./resources/json/output.json").writeText(json.encodeToString(output)) //RUN WITH DOCKER!
 
-        val schemaFilePath = "./evaluation/output-schema.json"
+        val schemaFilePath = "./resources/output-schema.json" //RUN WITH DOCKER!
 
         val isValid = validateJson(jsonString, schemaFilePath)
-
         if (isValid) {
-            File("./evaluation/output.json").writeText(jsonString)
+            //File("./evaluation/output.json").writeText(jsonString)
+            File("./resources/output.json").writeText(json.encodeToString(output)) //RUN WITH DOCKER!
         }
 
-        //extra feature
+        //extra feature - function leastFrequentedArea(), computes the least frequented area given a list of waypoints and a radius value
         val (leastCentralWayPoint, leastEntriesCount) = leastFrequentedArea(waypointsList, customParameters.mostFrequentedAreaRadiusKm!!) ?: Pair(WayPoint(Instant.now(), 0.0, 0.0), 0L)
 
         val advancedOutput = OutputJsonAdvanced(
@@ -96,10 +92,11 @@ fun main(args: Array<String>) {
             )
         )
         val jsonStringAdvanced = json.encodeToString(advancedOutput)
-        val schemaFilePathAdvanced = "./evaluation/output_advanced-schema.json"
+        val schemaFilePathAdvanced = "./resources/output_advanced-schema.json" //RUN WITH DOCKER!
         val isValidAdvanced = validateJson(jsonStringAdvanced, schemaFilePathAdvanced)
         if (isValidAdvanced) {
-            File("./evaluation/output_advanced.json").writeText(jsonStringAdvanced)
+            //File("./evaluation/output_advanced.json").writeText(jsonStringAdvanced)
+            File("./resources/output_advanced.json").writeText(jsonStringAdvanced)//RUN WITH DOCKER!
         }
     }
     catch (e: Exception) {
@@ -158,7 +155,6 @@ fun frequentedArea(list: List<WayPoint>, mostFrequentedAreaRadiusKm: Double, sel
         res = Utilities.computeResolution(mostFrequentedAreaRadiusKm)
 
         val mapOfAreas = Utilities.computeAreaMap(list, res) //AreaInfo useful to store information for each area
-
     // find max
     val mostFrequentedEntry = mapOfAreas.maxByOrNull(selector) ?: return null
     println("ID of cell (most frequented): ${mostFrequentedEntry.key}")

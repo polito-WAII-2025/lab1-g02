@@ -297,4 +297,44 @@ class UtilitiesTest {
             }
         )
     }
+
+    val validSchemaPath = "./src/test/resources/schema.json"
+    private val invalidSchemaPath = "src/test/resources/non_existing_schema.json"
+
+    @Test
+    fun `validateJson should return true for valid JSON`() {
+        val validJson = """{"name": "John", "age": 30}"""
+        val isValid = utilities.validateJson(validJson, validSchemaPath)
+        assertTrue(isValid, "Expected JSON to be valid")
+    }
+
+    @Test
+    fun `validateJson should return false for invalid JSON - 2nd test`() {
+        val invalidJson = """{"name": "John", "age": "thirty"}"""
+        val isValid = utilities.validateJson(invalidJson, validSchemaPath)
+        assertFalse(isValid, "Expected JSON to be invalid")
+    }
+
+    @Test
+    fun `validateJson should return false for invalid JSON - 3rd test`() {
+        val invalidJson = """{"name": 123, "age": 30}"""
+        val isValid = utilities.validateJson(invalidJson, validSchemaPath)
+        assertFalse(isValid, "Expected JSON to be invalid")
+    }
+
+    @Test
+    fun `validateJson should return false for malformatted JSON`() {
+        val malformedJson = """{"name": "John", "age": 30"""
+        assertThrows(Exception::class.java) {
+            utilities.validateJson(malformedJson, validSchemaPath)
+        }
+    }
+
+    @Test
+    fun `validateJson should return false for non-existing schema file`() {
+        val validJson = """{"name": "John", "age": 30}"""
+        assertThrows(Exception::class.java) {
+            utilities.validateJson(validJson, invalidSchemaPath)
+        }
+    }
 }
