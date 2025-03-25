@@ -11,7 +11,7 @@ object InstantAsLongSerializer : KSerializer<Instant> {
         PrimitiveSerialDescriptor("InstantAsLong", PrimitiveKind.LONG)
 
     override fun serialize(encoder: Encoder, value: Instant) {
-        encoder.encodeLong(value.toEpochMilli()) // <-- EPOCH millis
+        encoder.encodeLong(value.toEpochMilli())
     }
 
     override fun deserialize(decoder: Decoder): Instant {
@@ -22,9 +22,9 @@ object InstantAsLongSerializer : KSerializer<Instant> {
 @Serializable
 data class WayPoint(
     @Serializable(with = InstantAsLongSerializer::class)
-    val timestamp:Instant,
-    val latitude:Double,
-    val longitude:Double
+    val timestamp: Instant,
+    val latitude: Double,
+    val longitude: Double
 ){
     init {
         require(latitude in -90.0..90.0) { "Latitude must be between -90 and 90.0" }
@@ -35,7 +35,7 @@ data class WayPoint(
 @Serializable
 data class OutputJson(
     val maxDistanceFromStart: MaxDistanceFromStart,
-    val mostFrequentedArea: MostFrequentedArea,
+    val mostFrequentedArea: FrequentedArea,
     val waypointsOutsideGeofence: WaypointsOutsideGeofence
 )
 
@@ -46,7 +46,7 @@ data class MaxDistanceFromStart(
 )
 
 @Serializable
-data class MostFrequentedArea(
+data class FrequentedArea(
     val centralWaypoint: WayPoint,
     val areaRadiusKm: Double,
     val entriesCount: Long
@@ -58,4 +58,9 @@ data class WaypointsOutsideGeofence(
     val areaRadiusKm: Double,
     val count: Int,
     val waypoints: List<WayPoint>
+)
+
+@Serializable
+data class OutputJsonAdvanced(
+    val leastFrequentedArea: FrequentedArea,
 )

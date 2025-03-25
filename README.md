@@ -2,8 +2,19 @@
 # lab1-wa2025
 
 
-To run the project execute the following commands in order:
+To run the project with Docker execute these commands:
 
-1) ./gradlew clean build
-2) docker build -t route-analyzer .
-3) docker run --rm -v ${PWD}/evaluation:/app/resources route-analyzer /app/resources/custom-parameters.yml /app/resources/waypoints_v2.csv
+1) `cd RouteAnalyzer`
+2) `./gradlew clean build`
+3) `docker build -t route-analyzer .`
+4) `docker run --rm -v ${PWD}/../evaluation:/app/evaluation route-analyzer /app/evaluation/custom-parameters.yml /app/evaluation/waypoints.csv`
+
+To run the RouteAnalyzer app from command line in IntelliJ Idea:
+
+` ./gradlew run --args="../evaluation/custom-parameters.yml ../evaluation/waypoints.csv"`
+
+To run tests:
+
+`./gradlew test`
+
+

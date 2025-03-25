@@ -7,130 +7,178 @@ import java.io.File
 import org.example.Utilities.validateJson
 
 fun main(args: Array<String>) {
-    val currentDir = System.getProperty("user.dir")
-    println("Current directory: $currentDir")
 
-    if (args.isEmpty()) {
-        println("Errore: specificare il percorso del file custom-parameters.yml")
+    val isRunningInDocker = System.getenv("RUNNING_IN_DOCKER")?.toBoolean() ?: false
+
+    if (args.size != 2) {
+        println(
+        """
+        Error: Invalid number of arguments.
+        Correct usage: <custom-parameters.yml> <waypoints.csv>
+        Arguments received (${args.size}): ${args.joinToString()}
+        """.trimIndent()
+        )
         return
     }
 
-    println("YML: ${args[0]} " )
-    
-    val customParameters = Utilities.readYml(args[0])
-    val waypointsList = Utilities.readCsv(args[1])
+    try {
+        //read YML file
+        val customParameters = Utilities.readYml(args[0])
 
+        //read CSV file
+        val waypointsList = Utilities.readCsv(args[1])
 
-    // func 1
-    val (maxDistance, mostDistantWaypoint) = maxDistanceFromStart(waypointsList)
-    println("Max distance from start: $maxDistance and the waypoint is: $mostDistantWaypoint")
+        // func 1 - maxDistanceFromStart
+        val (maxDistance, mostDistantWaypoint) = maxDistanceFromStart(waypointsList, customParameters.earthRadiusKm)
+        println("Max distance from start: ${maxDistance}, Point: $mostDistantWaypoint")
 
-    //TODO ask what to do with exceptions inside the main
-    customParameters.mostFrequentedAreaRadiusKm ?: run {
-        val mostFrequentedAreaRadiusKm = computeMostFrequentedAreaRadiusKm(maxDistance, 10)
-        customParameters.setMostFrequentedAreaRadiusKm(mostFrequentedAreaRadiusKm)
-    }
+        customParameters.mostFrequentedAreaRadiusKm ?: run {
+            val mostFrequentedAreaRadiusKm = computeMostFrequentedAreaRadiusKm(maxDistance, 10)
+            customParameters.setMostFrequentedAreaRadiusKm(mostFrequentedAreaRadiusKm)
+        }
 
-    println("nuovi $customParameters")
+        // func 2 - mostFrequentedArea
+        val (centralWayPoint, entriesCount) = mostFrequentedArea(
+            waypointsList,
+            customParameters.mostFrequentedAreaRadiusKm!!
+        ) ?: Pair(WayPoint(Instant.now(), 0.0, 0.0), 0L)
 
-    // func 2
-    val (centralWayPoint, entriesCount) = mostFrequentedArea(waypointsList, customParameters.mostFrequentedAreaRadiusKm!!) ?: Pair(WayPoint(Instant.now(), 0.0, 0.0), 0L)
-
-    // func 3
-    val wayPointGeofence = WayPoint(Instant.ofEpochMilli(0), customParameters.geofenceCenterLatitude, customParameters.geofenceCenterLongitude)
-    val listWaypointsOutsideGeofence = waypointsOutsideGeofence(wayPointGeofence, customParameters.geofenceRadiusKm, waypointsList)
-
-    // TODO: earth radius
-    println( "numero di punti: " + "${listWaypointsOutsideGeofence.size}")
-
-
-    //write results in the output.json file
-    val output = OutputJson(
-        maxDistanceFromStart = MaxDistanceFromStart (
-            mostDistantWaypoint,
-            maxDistance
-        ),
-        mostFrequentedArea = MostFrequentedArea (
-            centralWayPoint,
-            customParameters.mostFrequentedAreaRadiusKm!!,
-            entriesCount
-        ),
-        waypointsOutsideGeofence = WaypointsOutsideGeofence (
-            wayPointGeofence,
-            customParameters.geofenceRadiusKm,
-            listWaypointsOutsideGeofence.size,
-            listWaypointsOutsideGeofence
-
+        // func 3 - waypointsOutsideGeofence
+        val wayPointGeofence = WayPoint(
+            Instant.ofEpochMilli(0),
+            customParameters.geofenceCenterLatitude,
+            customParameters.geofenceCenterLongitude
         )
-    )
+        val listWaypointsOutsideGeofence = waypointsOutsideGeofence(wayPointGeofence, customParameters.geofenceRadiusKm, waypointsList, customParameters.earthRadiusKm)
 
-    val json = Json { prettyPrint = true }
-    val jsonString = json.encodeToString(output) // Convertiamo l'oggetto in stringa JSON
+        println("Number of waypoints outside Geofence: " + "${listWaypointsOutsideGeofence.size}")
 
-    val schemaFilePath = "./evaluation/output-schema.json"
+        //write results of func 1, func 2 and func 3 in the file output.json
+        val output = OutputJson(
+            maxDistanceFromStart = MaxDistanceFromStart(
+                mostDistantWaypoint,
+                maxDistance
+            ),
+            mostFrequentedArea = FrequentedArea(
+                centralWayPoint,
+                customParameters.mostFrequentedAreaRadiusKm!!,
+                entriesCount
+            ),
+            waypointsOutsideGeofence = WaypointsOutsideGeofence(
+                wayPointGeofence,
+                customParameters.geofenceRadiusKm,
+                listWaypointsOutsideGeofence.size,
+                listWaypointsOutsideGeofence
+            )
+        )
 
-    val isValid = validateJson(jsonString, schemaFilePath)
+        val json = Json { prettyPrint = true }
+        val jsonString = json.encodeToString(output)
 
-    if (isValid) {
-        File("./evaluation/output.json").writeText(jsonString) // Salviamo il JSON solo se è valido
-    } else {
-        println("Il file JSON NON è conforme allo schema!")
+        val schemaFilePath = if (isRunningInDocker) "./evaluation/output-schema.json" else "../evaluation/output-schema.json"
+
+        val isValid = validateJson(jsonString, schemaFilePath)
+        if (isValid) {
+            val outputPath = if (isRunningInDocker) "./evaluation/output.json" else "../evaluation/output.json"
+            File(outputPath).writeText(json.encodeToString(output))
+        }
+
+        //extra feature - function leastFrequentedArea(), computes the least frequented area given a list of waypoints and a radius value
+        val (leastCentralWayPoint, leastEntriesCount) = leastFrequentedArea(waypointsList, customParameters.mostFrequentedAreaRadiusKm!!) ?: Pair(WayPoint(Instant.now(), 0.0, 0.0), 0L)
+
+        val advancedOutput = OutputJsonAdvanced(
+            leastFrequentedArea = FrequentedArea(
+                leastCentralWayPoint,
+                customParameters.mostFrequentedAreaRadiusKm!!,
+                leastEntriesCount
+            )
+        )
+        val jsonStringAdvanced = json.encodeToString(advancedOutput)
+        val schemaFilePathAdvanced = if (isRunningInDocker) "./evaluation/output_advanced-schema.json" else "../evaluation/output_advanced-schema.json"
+
+        val isValidAdvanced = validateJson(jsonStringAdvanced, schemaFilePathAdvanced)
+        if (isValidAdvanced) {
+            val outputPathAdvanced = if (isRunningInDocker) "./evaluation/output_advanced.json" else "../evaluation/output_advanced.json"
+            File(outputPathAdvanced).writeText(jsonStringAdvanced)
+        }
     }
-
+    catch (e: Exception) {
+        println(e)
+        return
+    }
 
 }
 
 //Calculate the farthest distance from the starting point of the route.
-fun maxDistanceFromStart(waypoints: List<WayPoint>): Pair<Double, WayPoint> {
+fun maxDistanceFromStart(waypoints: List<WayPoint>, earthRadiusKm: Double):  Pair<Double, WayPoint> {
+
+    if (waypoints.isEmpty()) {
+        throw IllegalArgumentException("Error in function maxDistanceFromStart: The waypoint list is empty")
+    }
+
     val startingPoint = waypoints.first()
     val remainingPoints = waypoints.drop(1) //Remove the first element
-    //val R = 6371.0 // Radius of the earth in km
+
     var max = 0.0
     var mostDistantWaypoint: WayPoint = startingPoint
 
 
     for (waypoint in remainingPoints) {
-
-        val d = Utilities.distanceFromWayPoints(startingPoint, waypoint)
-
-        //println("Distanza da (${startingPoint.lat}, ${startingPoint.longitude}) a (${waypoint.lat}, ${waypoint.longitude}) = %.3f km".format(d))
-
+        val d = Utilities.distanceFromWayPoints(startingPoint, waypoint, earthRadiusKm)
         if (d > max) {
             max = d
             mostDistantWaypoint = waypoint
         }
     }
+
     return Pair(max, mostDistantWaypoint)
 }
 
-//TODO is better to split the functions, one for the maximum and the other for finding the map (idArea,Duration)
-fun mostFrequentedArea(list: List<WayPoint>, mostFrequentedAreaRadiusKm: Double): Pair<WayPoint, Long>? {
+fun mostFrequentedArea(list: List<WayPoint>, mostFrequentedAreaRadiusKm: Double) = frequentedArea(list, mostFrequentedAreaRadiusKm){it.value.timeSpentInArea.toMillis()}
+fun leastFrequentedArea(list: List<WayPoint>, mostFrequentedAreaRadiusKm: Double) = frequentedArea(list, mostFrequentedAreaRadiusKm){-it.value.timeSpentInArea.toMillis()}
+
+fun frequentedArea(list: List<WayPoint>, mostFrequentedAreaRadiusKm: Double, selector:(Map.Entry<Long, AreaInfo>) -> Long): Pair<WayPoint, Long>? {
 
     // list empty
-    if (list.isEmpty()) return null
+    if (list.isEmpty()) {
+        throw IllegalArgumentException("Error in function mostFrequentedArea: The waypoint list is empty")
+    }
+
+    if(mostFrequentedAreaRadiusKm <= 0) {
+        throw IllegalArgumentException("Error in function mostFrequentedArea: The mostFrequentedAreaRadiusKm must be greater than 0.")
+    }
     //one element in the list
-    if(list.size == 1) return Pair(list[0], 1)
+    if(list.size == 1) {
+        return Pair(list.first(), 1)
+    }
 
-    //calculate the best resolution given the radius
-    val res: Int = Utilities.computeResolution(mostFrequentedAreaRadiusKm)
+    val res: Int
+    try {
+        //calculate the best resolution given the radius
+        res = Utilities.computeResolution(mostFrequentedAreaRadiusKm)
 
-    val mapOfAreas = Utilities.computeAreaMap(list, res) //AreaInfo useful to store information for each area
-
+        val mapOfAreas = Utilities.computeAreaMap(list, res) //AreaInfo useful to store information for each area
     // find max
-    val mostFrequentedEntry = mapOfAreas.maxByOrNull { it.value.timeSpentInArea } ?: return null
+    val mostFrequentedEntry = mapOfAreas.maxByOrNull(selector) ?: return null
     println("ID of cell (most frequented): ${mostFrequentedEntry.key}")
 
-    val center = Utilities.H3Instance.cellToLatLng(mostFrequentedEntry.key)
-    println("Time spent in the area: ${mostFrequentedEntry.value.timeSpentInArea}")
-    println("Center of most frequented area: $center")
-    println("Number of entries: ${mostFrequentedEntry.value.entriesCount}")
-    println("Timestamp of the first waypoint: ${mostFrequentedEntry.value.timestampFirstPoint}")
+        val center = Utilities.H3Instance.cellToLatLng(mostFrequentedEntry.key)
+        println("Time spent in the area: ${mostFrequentedEntry.value.timeSpentInArea}")
+        println("Center of most frequented area: $center")
+        println("Number of entries: ${mostFrequentedEntry.value.entriesCount}")
+        println("Timestamp of the first waypoint: ${mostFrequentedEntry.value.timestampFirstPoint}")
 
 
-    val centralWaypoint =  WayPoint(mostFrequentedEntry.value.timestampFirstPoint, center.lat, center.lng)
-    return Pair(centralWaypoint, mostFrequentedEntry.value.entriesCount)
+        val centralWaypoint =  WayPoint(mostFrequentedEntry.value.timestampFirstPoint, center.lat, center.lng)
+        return Pair(centralWaypoint, mostFrequentedEntry.value.entriesCount)
+
+    }
+    catch (e: Exception) {
+        throw e
+    }
 }
 
-//TODO: do we throw exception for negative radius? or a print statement
-fun waypointsOutsideGeofence(centre: WayPoint, radius: Double, listOfWayPoints: List<WayPoint>): List<WayPoint> = listOfWayPoints.filter { Utilities.distanceFromWayPoints(centre,it)> radius }
-
+fun waypointsOutsideGeofence(centre: WayPoint, radius: Double, listOfWayPoints: List<WayPoint>, earthRadiusKm: Double): List<WayPoint> {
+    require(radius > 0) { "Error in function waypointsOutsideGeofence: Radius must be greater than zero." }
+    return listOfWayPoints.filter { Utilities.distanceFromWayPoints(centre, it, earthRadiusKm) > radius }
+}
